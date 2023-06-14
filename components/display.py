@@ -76,15 +76,15 @@ class HelpText(object):
 class HUD(object):
     def __init__(self, width, height):
         self.dim = (width, height)
-        font = pygame.font.Font(pygame.font.get_default_font(), 20)
+        # font = pygame.font.Font(pygame.font.get_default_font(), 20)
         font_name = 'courier' if os.name == 'nt' else 'mono'
         fonts = [x for x in pygame.font.get_fonts() if font_name in x]
         default_font = 'ubuntumono'
         mono = default_font if default_font in fonts else fonts[0]
         mono = pygame.font.match_font(mono)
-        self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 14)
+        self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 24)
         # self._notifications = FadingText(font, (width, 40), (0, height - 40))
-        self.help = HelpText(pygame.font.Font(mono, 24), width, height)
+        # self.help = HelpText(pygame.font.Font(mono, 24), width, height)
         self.server_fps = 0
         self.frame = 0
         self.simulation_time = 0
@@ -115,6 +115,8 @@ class HUD(object):
         self._info = dict()
         self._info['speed'] = '% 15.0f mph' % (0.621371 * 3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
         self._info['heading'] = u'% 16.0f\N{DEGREE SIGN} % 2s' % (t.rotation.yaw, heading)
+        self._info['client_fps'] = 'Client:  % 16.0f FPS' % clock.get_fps()
+        self._info['server_fps'] = 'Server:  % 16.0f FPS' % self.server_fps
 
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
@@ -182,8 +184,12 @@ class HUD(object):
         if not self._info:
             return
 
-        surface = self._font_mono.render(self._info['speed'], True, (255, 255, 255))
+        # surface = self._font_mono.render(self._info['speed'], True, (255, 255, 255))
+        surface = self._font_mono.render(self._info['client_fps'], True, (255, 255, 255))
         display.blit(surface, (int(1920 / 2 - 200), int(1080 / 2 - 200)))
+
+        surface = self._font_mono.render(self._info['server_fps'], True, (255, 255, 255))
+        display.blit(surface, (int(1920 / 2 - 200), int(1080 / 2 - 180)))
 
         # for item in self._info_text:
         #     if v_offset + 18 > self.dim[1]:
