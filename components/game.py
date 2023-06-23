@@ -9,9 +9,9 @@ class World(object):
         self.world = carla_world
         self.hud = hud
         self.player = None
-        self.collision_sensor = None
-        self.lane_invasion_sensor = None
-        self.gnss_sensor = None
+        # self.collision_sensor = None
+        # self.lane_invasion_sensor = None
+        # self.gnss_sensor = None
         self.camera_manager = None
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
@@ -42,9 +42,9 @@ class World(object):
             spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
-        self.collision_sensor = CollisionSensor(self.player, self.hud)
-        self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
-        self.gnss_sensor = GnssSensor(self.player)
+        # self.collision_sensor = CollisionSensor(self.player, self.hud)
+        # self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
+        # self.gnss_sensor = GnssSensor(self.player)
         self.camera_manager = CameraManager(self.player, self.hud)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
@@ -68,12 +68,13 @@ class World(object):
     def destroy(self):
         sensors = [
             self.camera_manager.driver_view,
-            self.camera_manager.sensor_side_mirrors[0],
-            self.camera_manager.sensor_side_mirrors[1],
-            self.camera_manager.reverse_mirror,
-            self.collision_sensor.sensor,
-            self.lane_invasion_sensor.sensor,
-            self.gnss_sensor.sensor]
+            # self.camera_manager.sensor_side_mirrors[0],
+            # self.camera_manager.sensor_side_mirrors[1],
+            # self.camera_manager.reverse_mirror,
+            # self.collision_sensor.sensor,
+            # self.lane_invasion_sensor.sensor,
+            # self.gnss_sensor.sensor
+        ]
         for sensor in sensors:
             if sensor is not None:
                 sensor.stop()

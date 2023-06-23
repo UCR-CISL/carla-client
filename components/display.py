@@ -107,10 +107,10 @@ class HUD(object):
         heading += 'S' if abs(t.rotation.yaw) > 90.5 else ''
         heading += 'E' if 179.5 > t.rotation.yaw > 0.5 else ''
         heading += 'W' if -0.5 > t.rotation.yaw > -179.5 else ''
-        colhist = world.collision_sensor.get_collision_history()
-        collision = [colhist[x + self.frame - 200] for x in range(0, 200)]
-        max_col = max(1.0, max(collision))
-        collision = [x / max_col for x in collision]
+        # colhist = world.collision_sensor.get_collision_history()
+        # collision = [colhist[x + self.frame - 200] for x in range(0, 200)]
+        # max_col = max(1.0, max(collision))
+        # collision = [x / max_col for x in collision]
         vehicles = world.world.get_actors().filter('vehicle.*')
         self._info = dict()
         self._info['speed'] = '% 15.0f mph' % (0.621371 * 3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
@@ -129,7 +129,7 @@ class HUD(object):
             'Speed:   % 15.0f km/h' % (3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2)),  # TODO: Change to mph
             u'Heading:% 16.0f\N{DEGREE SIGN} % 2s' % (t.rotation.yaw, heading),
             'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
-            'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
+            # 'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
             'Height:  % 18.0f m' % t.location.z,
             '']
         if isinstance(c, carla.VehicleControl):
@@ -145,25 +145,26 @@ class HUD(object):
             self._info_text += [
                 ('Speed:', c.speed, 0.0, 5.556),
                 ('Jump:', c.jump)]
-        self._info_text += [
-            '',
-            'Collision:',
-            collision,
-            '',
-            'Number of vehicles: % 8d' % len(vehicles)]
-        if len(vehicles) > 1:
-            self._info_text += ['Nearby vehicles:']
-            distance = lambda l: math.sqrt(
-                (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
-            vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
-            for d, vehicle in sorted(vehicles):
-                if d > 200.0:
-                    break
-                vehicle_type = get_actor_display_name(vehicle, truncate=22)
-                self._info_text.append('% 4dm %s' % (d, vehicle_type))
+        # self._info_text += [
+        #     '',
+        #     'Collision:',
+        #     collision,
+        #     '',
+        #     'Number of vehicles: % 8d' % len(vehicles)]
+        # if len(vehicles) > 1:
+        #     self._info_text += ['Nearby vehicles:']
+        #     distance = lambda l: math.sqrt(
+        #         (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
+        #     vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
+        #     for d, vehicle in sorted(vehicles):
+        #         if d > 200.0:
+        #             break
+        #         vehicle_type = get_actor_display_name(vehicle, truncate=22)
+        #         self._info_text.append('% 4dm %s' % (d, vehicle_type))
 
     def toggle_info(self):
-        self._show_info = not self._show_info
+        pass
+        # self._show_info = not self._show_info
 
     def notification(self, text, seconds=2.0):
         # self._notifications.set_text(text, seconds=seconds)
@@ -176,7 +177,7 @@ class HUD(object):
     def render(self, display):
         info_surface = pygame.Surface((400, 400))
         info_surface.set_alpha(100)
-        display.blit(info_surface, (int(1920 / 2 - 200), int(1080 / 2 - 200)))  # TODO: don't hard code
+        display.blit(info_surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 2 - 200)))  # TODO: don't hard code
         v_offset = 4
         bar_h_offset = 100
         bar_width = 106
@@ -186,10 +187,10 @@ class HUD(object):
 
         # surface = self._font_mono.render(self._info['speed'], True, (255, 255, 255))
         surface = self._font_mono.render(self._info['client_fps'], True, (255, 255, 255))
-        display.blit(surface, (int(1920 / 2 - 200), int(1080 / 2 - 200)))
+        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 2 - 200)))
 
         surface = self._font_mono.render(self._info['server_fps'], True, (255, 255, 255))
-        display.blit(surface, (int(1920 / 2 - 200), int(1080 / 2 - 180)))
+        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 2 - 180)))
 
         # for item in self._info_text:
         #     if v_offset + 18 > self.dim[1]:
