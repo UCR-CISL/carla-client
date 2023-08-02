@@ -82,7 +82,8 @@ class HUD(object):
         default_font = 'ubuntumono'
         mono = default_font if default_font in fonts else fonts[0]
         mono = pygame.font.match_font(mono)
-        self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 24)
+        self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 34)
+        self._font_mono2 = pygame.font.Font(mono, 12 if os.name == 'nt' else 18)
         # self._notifications = FadingText(font, (width, 40), (0, height - 40))
         # self.help = HelpText(pygame.font.Font(mono, 24), width, height)
         self.server_fps = 0
@@ -103,6 +104,7 @@ class HUD(object):
         t = world.player.get_transform()
         v = world.player.get_velocity()
         c = world.player.get_control()
+        ang_v = world.player.get_angular_velocity()
         heading = 'N' if abs(t.rotation.yaw) < 89.5 else ''
         heading += 'S' if abs(t.rotation.yaw) > 90.5 else ''
         heading += 'E' if 179.5 > t.rotation.yaw > 0.5 else ''
@@ -113,10 +115,11 @@ class HUD(object):
         # collision = [x / max_col for x in collision]
         vehicles = world.world.get_actors().filter('vehicle.*')
         self._info = dict()
-        self._info['speed'] = '% 15.0f mph' % (0.621371 * 3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
-        self._info['heading'] = u'% 16.0f\N{DEGREE SIGN} % 2s' % (t.rotation.yaw, heading)
-        self._info['client_fps'] = 'Client:  % 16.0f FPS' % clock.get_fps()
-        self._info['server_fps'] = 'Server:  % 16.0f FPS' % self.server_fps
+        self._info['speed'] = '% 1.0f mph' % (0.621371 * 3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
+        self._info['heading'] = u'%16s %8.0f\N{DEGREE SIGN}' % (heading, t.rotation.yaw)
+        self._info['client_fps'] = '  Client:  % 1.0f FPS' % clock.get_fps()
+        self._info['server_fps'] = '  Server:  % 1.0f FPS' % self.server_fps
+        self._info['angular_velocity'] = '%15s %4.0f deg/s' % (heading, math.sqrt(ang_v.x ** 2 + ang_v.y ** 2 + ang_v.z ** 2))
 
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
@@ -175,9 +178,9 @@ class HUD(object):
         pass
 
     def render(self, display):
-        info_surface = pygame.Surface((400, 400))
+        info_surface = pygame.Surface((400, 200))
         info_surface.set_alpha(100)
-        display.blit(info_surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 2 - 200)))  # TODO: don't hard code
+        display.blit(info_surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 1.2 - 100)))  # TODO: don't hard code
         v_offset = 4
         bar_h_offset = 100
         bar_width = 106
@@ -185,12 +188,22 @@ class HUD(object):
         if not self._info:
             return
 
-        # surface = self._font_mono.render(self._info['speed'], True, (255, 255, 255))
-        surface = self._font_mono.render(self._info['client_fps'], True, (255, 255, 255))
-        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 2 - 200)))
+        surface = self._font_mono.render(self._info['speed'], True, (255, 255, 255))
+        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 1.2 - 90)))
+        
+        # surface = self._font_mono.render(self._info['heading'], True, (255, 255, 255))
+        # display.blit(surface, (int(self.dim[0] / 2 - 260), int(self.dim[1] / 1.2 - 90)))
 
-        surface = self._font_mono.render(self._info['server_fps'], True, (255, 255, 255))
-        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 2 - 180)))
+        surface = self._font_mono.render(self._info['angular_velocity'], True, (255, 255, 255))
+        display.blit(surface, (int(self.dim[0] / 2 - 260), int(self.dim[1] / 1.2 - 90)))
+
+        surface = self._font_mono2.render(self._info['client_fps'], True, (255, 255, 255))
+        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 1.2 - 40)))
+
+        surface = self._font_mono2.render(self._info['server_fps'], True, (255, 255, 255))
+        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 1.2 - 20)))
+
+        
 
         # for item in self._info_text:
         #     if v_offset + 18 > self.dim[1]:
