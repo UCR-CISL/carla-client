@@ -63,8 +63,8 @@ class CameraManager(object):
 
         for item in self.reverse_mirror_info:
             bp = bp_library.find(item[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 8)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 16)))
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 12)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 24)))
             item.append(bp)
 
     def set_sensor(self, index, notify=True):
@@ -127,12 +127,12 @@ class CameraManager(object):
         if self.surface is not None:
             display.blit(self.surface, (0, 0))
         # if self.surface_side_mirrors[0] is not None:
-        #     display.blit(self.surface_side_mirrors[0], (int(self.hud.dim[0] / 8), int(13 * self.hud.dim[1] / 16)))
+        #     display.blit(self.surface_side_mirrors[0], (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
         # if self.surface_side_mirrors[1] is not None:
         #     display.blit(self.surface_side_mirrors[1],
-        #                  (int(13 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(13 * self.hud.dim[1] / 16)))
+        #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
         # if self.surface_reverse is not None:
-        #     display.blit(self.surface_reverse, (int(5 * self.hud.dim[0] / 16), 0))
+        #     display.blit(self.surface_reverse, (int(6 * self.hud.dim[0] / 16), 0))
 
     @staticmethod
     def _parse_left_mirror_image(weak_self, image):
