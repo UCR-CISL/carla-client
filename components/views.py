@@ -9,6 +9,8 @@ class CameraManager(object):
     def __init__(self, parent_actor, hud):
         self.driver_view = None
         self.sensor_side_mirrors = []
+        self.left_mirror = None
+        self.right_mirror = None
         self.reverse_mirror = None
 
         self.surface = None
@@ -70,6 +72,7 @@ class CameraManager(object):
     def set_sensor(self, index, notify=True):
         index = index % len(self.driver_view_info)
         needs_respawn = self.index is None
+        self.index = index
         if needs_respawn:
             if self.driver_view is not None:
                 self.driver_view.destroy()
@@ -90,20 +93,19 @@ class CameraManager(object):
             #         self._side_mirrors_transforms[i],
             #         attach_to=self._parent)
             #     self.sensor_side_mirrors.append(mirror)
-            # self.reverse_mirror = self._parent.get_world().spawn_actor(
-            #     self.reverse_mirror_info[0][-1],
-            #     self._reverse_mirror_transforms[0],
-            #     attach_to=self._parent)
+            self.reverse_mirror = self._parent.get_world().spawn_actor(
+                self.reverse_mirror_info[0][-1],
+                self._reverse_mirror_transforms[0],
+                attach_to=self._parent)
             # We need to pass the lambda a weak reference to self to avoid
             # circular reference.
             weak_self = weakref.ref(self)
             self.driver_view.listen(lambda image: CameraManager._parse_image(weak_self, image))
             # self.sensor_side_mirrors[0].listen(lambda image: CameraManager._parse_left_mirror_image(weak_self, image))
             # self.sensor_side_mirrors[1].listen(lambda image: CameraManager._parse_right_mirror_image(weak_self, image))
-            # self.reverse_mirror.listen(lambda image: CameraManager._parse_reverse_image(weak_self, image))
+            self.reverse_mirror.listen(lambda image: CameraManager._parse_reverse_image(weak_self, image))
         if notify:
             self.hud.notification(self.driver_view_info[index][2])
-        self.index = index
 
     def _switch_side_view(self):
         self.driver_view.destroy()
@@ -112,6 +114,28 @@ class CameraManager(object):
             self.driver_view_info[0][-1],
             self._camera_transforms[self.transform_index],
             attach_to=self._parent)
+        if self.transform_index == 1:
+            self.left_mirror = self._parent.get_world().spawn_actor(
+                self.sensors_side_mirrors_info[0][-1],
+                self._side_mirrors_transforms[0],
+                attach_to=self._parent)
+            self.left_mirror.listen(lambda image: CameraManager._parse_left_mirror_image(weak_self, image))
+        elif self.transform_index == 2:
+            self.right_mirror = self._parent.get_world().spawn_actor(
+                self.sensors_side_mirrors_info[1][-1],
+                self._side_mirrors_transforms[1],
+                attach_to=self._parent)
+            self.right_mirror.listen(lambda image: CameraManager._parse_right_mirror_image(weak_self, image))
+        else:
+            if self.left_mirror is not None:
+                self.left_mirror.destroy()
+                self.surface_side_mirrors[0] = None
+                self.left_mirror = None
+            if self.right_mirror is not None:
+                self.right_mirror.destroy()
+                self.surface_side_mirrors[1] = None
+                self.right_mirror = None
+
         weak_self = weakref.ref(self)
         self.driver_view.listen(lambda image: CameraManager._parse_image(weak_self, image))
 
@@ -126,13 +150,13 @@ class CameraManager(object):
     def render(self, display):
         if self.surface is not None:
             display.blit(self.surface, (0, 0))
-        # if self.surface_side_mirrors[0] is not None:
-        #     display.blit(self.surface_side_mirrors[0], (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
-        # if self.surface_side_mirrors[1] is not None:
-        #     display.blit(self.surface_side_mirrors[1],
-        #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
-        # if self.surface_reverse is not None:
-        #     display.blit(self.surface_reverse, (int(6 * self.hud.dim[0] / 16), 0))
+        if self.surface_side_mirrors[0] is not None:
+            display.blit(self.surface_side_mirrors[0], (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
+        if self.surface_side_mirrors[1] is not None:
+            display.blit(self.surface_side_mirrors[1],
+                         (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
+        if self.surface_reverse is not None:
+            display.blit(self.surface_reverse, (int(6 * self.hud.dim[0] / 16), 0))
 
     @staticmethod
     def _parse_left_mirror_image(weak_self, image):

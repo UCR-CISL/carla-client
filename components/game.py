@@ -70,7 +70,9 @@ class World(object):
             self.camera_manager.driver_view,
             # self.camera_manager.sensor_side_mirrors[0],
             # self.camera_manager.sensor_side_mirrors[1],
-            # self.camera_manager.reverse_mirror,
+            self.camera_manager.left_mirror,
+            self.camera_manager.right_mirror,
+            self.camera_manager.reverse_mirror,
             # self.collision_sensor.sensor,
             # self.lane_invasion_sensor.sensor,
             # self.gnss_sensor.sensor
