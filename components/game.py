@@ -67,10 +67,10 @@ class World(object):
 
     def destroy(self):
         sensors = [
-            self.camera_manager.driver_view,
-            # self.camera_manager.sensor_side_mirrors[0],
-            # self.camera_manager.sensor_side_mirrors[1],
-            # self.camera_manager.reverse_mirror,
+            self.camera_manager.driver_camera_decoder,
+            self.camera_manager.side_mirror_camera_decoders[0],
+            self.camera_manager.side_mirror_camera_decoders[1],
+            self.camera_manager.reverse_camera_decoder,
             # self.collision_sensor.sensor,
             # self.lane_invasion_sensor.sensor,
             # self.gnss_sensor.sensor

@@ -3,17 +3,68 @@ from carla import ColorConverter as cc
 import weakref
 import numpy as np
 import pygame
+import imageio.v3 as iio
+import multiprocessing
+from multiprocessing import shared_memory
+import ctypes
+
+
+def decode(bytes_q, shm_decoded, terminate):
+    while not terminate.value:
+        if bytes_q.empty():
+            continue
+        bytes_all = bytes_q.get()
+
+        frames = iio.imread(
+            bytes_all.tobytes(),
+            thread_count=16,
+            thread_type="SLICE",
+            index=0,
+            plugin="pyav",
+            extension=".mpeg",
+        )
+
+        b = np.ndarray(frames.shape, dtype=frames.dtype, buffer=shm_decoded.buf)
+        b[:] = frames[:]
+
+
+class Decoder:
+    def __init__(self, sensor, width, height):
+        self.sensor = sensor
+        self.surface = None
+
+        self.terminate = multiprocessing.Value(ctypes.c_bool, False)
+        self.bytes_q = multiprocessing.Queue()
+        self.shm_decoded = shared_memory.SharedMemory(create=True, size=width * height * 3)
+        self.process = multiprocessing.Process(target=decode,
+                                               args=(self.bytes_q, self.shm_decoded, self.terminate))
+        self.decoded_shape = (height, width, 3)
+
+    def start(self):
+        self.terminate.value = False
+        # We need to pass the lambda a weak reference to self to avoid circular reference.
+        weak_self = weakref.ref(self)
+        self.sensor.listen(lambda image: _parse_image(weak_self, image))
+        self.process.start()
+
+    def stop(self):
+        self.terminate.value = True
+        self.process.join()
+        self.sensor.stop()
+
+    def destroy(self):
+        if not self.terminate.value:
+            self.stop()
+        self.shm_decoded.close()
+        self.shm_decoded.unlink()
+        self.sensor.destroy()
 
 
 class CameraManager(object):
     def __init__(self, parent_actor, hud):
-        self.driver_view = None
-        self.sensor_side_mirrors = []
-        self.reverse_mirror = None
-
-        self.surface = None
-        self.surface_side_mirrors = [None, None]
-        self.surface_reverse = None
+        self.driver_camera_decoder = None
+        self.reverse_camera_decoder = None
+        self.side_mirror_camera_decoders = []
 
         self._parent = parent_actor
         self.hud = hud
@@ -35,24 +86,33 @@ class CameraManager(object):
 
         self.transform_index = 0
         self.driver_view_info = [
-            ['sensor.camera.rgb', cc.Raw, 'Camera RGB']
+            ['sensor.camera.stream', cc.Raw, 'Camera RGB']
         ]
-        self.sensors_side_mirrors_info = [
-            ['sensor.camera.rgb', cc.Raw, 'Camera RGB Side Mirror Left'],
-            ['sensor.camera.rgb', cc.Raw, 'Camera RGB Side Mirror Right']
-        ]
+
         self.reverse_mirror_info = [
-            ['sensor.camera.rgb', cc.Raw, 'Camera RGB']
+            ['sensor.camera.stream', cc.Raw, 'Camera RGB']
+        ]
+
+        self.sensors_side_mirrors_info = [
+            ['sensor.camera.stream', cc.Raw, 'Camera RGB Side Mirror Left'],
+            ['sensor.camera.stream', cc.Raw, 'Camera RGB Side Mirror Right']
         ]
 
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
+
         for item in self.driver_view_info:
             bp = bp_library.find(item[0])
             bp.set_attribute('image_size_x', str(hud.dim[0]))
             bp.set_attribute('image_size_y', str(hud.dim[1]))
             item.append(bp)
         self.index = None
+
+        for item in self.reverse_mirror_info:
+            bp = bp_library.find(item[0])
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 12)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 24)))
+            item.append(bp)
 
         for mirror_info in self.sensors_side_mirrors_info:
             bp = bp_library.find(mirror_info[0])
@@ -61,49 +121,39 @@ class CameraManager(object):
             bp.set_attribute('fov', str(45.0))
             mirror_info.append(bp)
 
-        for item in self.reverse_mirror_info:
-            bp = bp_library.find(item[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 12)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 24)))
-            item.append(bp)
-
     def set_sensor(self, index, notify=True):
         index = index % len(self.driver_view_info)
         needs_respawn = self.index is None
         if needs_respawn:
-            if self.driver_view is not None:
-                self.driver_view.destroy()
-                for mirror in self.sensor_side_mirrors:
-                    mirror.destroy()
-                self.reverse_mirror.destroy()
-                self.sensor_side_mirrors = []
-                self.surface = None
-                self.surface_side_mirrors = [None, None]
-                self.surface_reverse = None
-            self.driver_view = self._parent.get_world().spawn_actor(
-                self.driver_view_info[index][-1],
-                self._camera_transforms[0],
-                attach_to=self._parent)
-            # for i in range(2):
-            #     mirror = self._parent.get_world().spawn_actor(
-            #         self.sensors_side_mirrors_info[i][-1],
-            #         self._side_mirrors_transforms[i],
-            #         attach_to=self._parent)
-            #     self.sensor_side_mirrors.append(mirror)
-            # self.reverse_mirror = self._parent.get_world().spawn_actor(
-            #     self.reverse_mirror_info[0][-1],
-            #     self._reverse_mirror_transforms[0],
-            #     attach_to=self._parent)
-            # We need to pass the lambda a weak reference to self to avoid
-            # circular reference.
-            weak_self = weakref.ref(self)
-            self.driver_view.listen(lambda image: CameraManager._parse_image(weak_self, image))
-            # self.sensor_side_mirrors[0].listen(lambda image: CameraManager._parse_left_mirror_image(weak_self, image))
-            # self.sensor_side_mirrors[1].listen(lambda image: CameraManager._parse_right_mirror_image(weak_self, image))
-            # self.reverse_mirror.listen(lambda image: CameraManager._parse_reverse_image(weak_self, image))
+            if self.driver_camera_decoder is not None:
+                self.driver_camera_decoder.destroy()
+                self.reverse_camera_decoder.destroy()
+
+                self.driver_camera_decoder = None
+                self.reverse_camera_decoder = None
+
+            self.driver_camera_decoder = self._decoder_setup(self.driver_view_info[0][-1],
+                                                             self._camera_transforms[0])
+            self.driver_camera_decoder.start()
+
+            self.reverse_camera_decoder = self._decoder_setup(self.reverse_mirror_info[0][-1],
+                                                              self._reverse_mirror_transforms[0])
+            self.reverse_camera_decoder.start()
+
+            for i in range(2):
+                side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[i][-1],
+                                                          self._side_mirrors_transforms[i])
+                self.side_mirror_camera_decoders.append(side_mirror_decoder)
+                side_mirror_decoder.start()
+
         if notify:
             self.hud.notification(self.driver_view_info[index][2])
         self.index = index
+
+    def _decoder_setup(self, bp, transform):
+        camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
+        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int())
+        return decoder
 
     def _switch_side_view(self):
         self.driver_view.destroy()
@@ -124,61 +174,25 @@ class CameraManager(object):
         self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def render(self, display):
-        if self.surface is not None:
-            display.blit(self.surface, (0, 0))
-        # if self.surface_side_mirrors[0] is not None:
-        #     display.blit(self.surface_side_mirrors[0], (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
-        # if self.surface_side_mirrors[1] is not None:
-        #     display.blit(self.surface_side_mirrors[1],
-        #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
-        # if self.surface_reverse is not None:
-        #     display.blit(self.surface_reverse, (int(6 * self.hud.dim[0] / 16), 0))
+        if self.driver_camera_decoder.surface is not None:
+            display.blit(self.driver_camera_decoder.surface, (0, 0))
+        if self.reverse_camera_decoder.surface is not None:
+            display.blit(self.reverse_camera_decoder.surface, (int(6 * self.hud.dim[0] / 16), 0))
+        if self.side_mirror_camera_decoders[0].surface is not None:
+            display.blit(self.side_mirror_camera_decoders[0].surface,
+                         (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
+        if self.side_mirror_camera_decoders[1].surface is not None:
+            display.blit(self.side_mirror_camera_decoders[1].surface,
+                         (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
-    @staticmethod
-    def _parse_left_mirror_image(weak_self, image):
-        self = weak_self()
-        if not self:
-            return
-        image.convert(self.sensors_side_mirrors_info[0][1])
-        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-        array = np.reshape(array, (image.height, image.width, 4))
-        array = array[:, :, :3]
-        array = array[:, :, ::-1]
-        self.surface_side_mirrors[0] = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
-    @staticmethod
-    def _parse_right_mirror_image(weak_self, image):
-        self = weak_self()
-        if not self:
-            return
-        image.convert(self.sensors_side_mirrors_info[1][1])
-        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-        array = np.reshape(array, (image.height, image.width, 4))
-        array = array[:, :, :3]
-        array = array[:, :, ::-1]
-        self.surface_side_mirrors[1] = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+def _parse_image(weak_self, image):
+    self = weak_self()
+    if not self or self.terminate.value:
+        return
 
-    @staticmethod
-    def _parse_image(weak_self, image):
-        self = weak_self()
-        if not self:
-            return
-        image.convert(self.driver_view_info[self.index][1])
-        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-        array = np.reshape(array, (image.height, image.width, 4))
-        array = array[:, :, :3]
-        array = array[:, :, ::-1]
-        self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+    array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+    self.bytes_q.put(array)
 
-    @staticmethod
-    def _parse_reverse_image(weak_self, image):
-        self = weak_self()
-        if not self:
-            return
-        image.convert(self.reverse_mirror_info[0][1])
-        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-        array = np.reshape(array, (image.height, image.width, 4))
-        array = array[:, :, :3]
-        array = array[:, :, ::-1]
-        array = np.fliplr(array)
-        self.surface_reverse = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+    data = np.ndarray(self.decoded_shape, dtype=np.uint8, buffer=self.shm_decoded.buf)
+    self.surface = pygame.surfarray.make_surface(data.swapaxes(0, 1))
