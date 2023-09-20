@@ -9,7 +9,7 @@ from multiprocessing import shared_memory
 import ctypes
 
 
-def decode(bytes_q, shm_decoded, terminate):
+def decode_loop(bytes_q, shm_decoded, terminate):
     while not terminate.value:
         if bytes_q.empty():
             continue
@@ -36,7 +36,7 @@ class Decoder:
         self.terminate = multiprocessing.Value(ctypes.c_bool, False)
         self.bytes_q = multiprocessing.Queue()
         self.shm_decoded = shared_memory.SharedMemory(create=True, size=width * height * 3)
-        self.process = multiprocessing.Process(target=decode,
+        self.process = multiprocessing.Process(target=decode_loop,
                                                args=(self.bytes_q, self.shm_decoded, self.terminate))
         self.decoded_shape = (height, width, 3)
 
@@ -44,7 +44,7 @@ class Decoder:
         self.terminate.value = False
         # We need to pass the lambda a weak reference to self to avoid circular reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda image: _parse_image(weak_self, image))
+        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data))
         self.process.start()
 
     def stop(self):
@@ -156,14 +156,11 @@ class CameraManager(object):
         return decoder
 
     def _switch_side_view(self):
-        self.driver_view.destroy()
-        self.surface = None
-        self.driver_view = self._parent.get_world().spawn_actor(
-            self.driver_view_info[0][-1],
-            self._camera_transforms[self.transform_index],
-            attach_to=self._parent)
-        weak_self = weakref.ref(self)
-        self.driver_view.listen(lambda image: CameraManager._parse_image(weak_self, image))
+        prev_decoder = self.driver_camera_decoder
+        self.driver_camera_decoder = self._decoder_setup(self.driver_view_info[0][-1],
+                                                         self._camera_transforms[self.transform_index])
+        self.driver_camera_decoder.start()
+        prev_decoder.destroy()
 
     def toggle_side_view(self, transform_index):
         self.transform_index = transform_index
@@ -186,12 +183,12 @@ class CameraManager(object):
                          (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
 
-def _parse_image(weak_self, image):
+def _decode(weak_self, byte_data):
     self = weak_self()
     if not self or self.terminate.value:
         return
 
-    array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+    array = np.frombuffer(byte_data.raw_data, dtype=np.dtype("uint8"))
     self.bytes_q.put(array)
 
     data = np.ndarray(self.decoded_shape, dtype=np.uint8, buffer=self.shm_decoded.buf)
