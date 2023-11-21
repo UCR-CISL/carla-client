@@ -140,11 +140,11 @@ class CameraManager(object):
                                                               self._reverse_mirror_transforms[0])
             self.reverse_camera_decoder.start()
 
-            for i in range(2):
-                side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[i][-1],
-                                                          self._side_mirrors_transforms[i])
-                self.side_mirror_camera_decoders.append(side_mirror_decoder)
-                side_mirror_decoder.start()
+            # for i in range(2):
+            #     side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[i][-1],
+            #                                               self._side_mirrors_transforms[i])
+            #     self.side_mirror_camera_decoders.append(side_mirror_decoder)
+            #     side_mirror_decoder.start()
 
         if notify:
             self.hud.notification(self.driver_view_info[index][2])
@@ -175,12 +175,12 @@ class CameraManager(object):
             display.blit(self.driver_camera_decoder.surface, (0, 0))
         if self.reverse_camera_decoder.surface is not None:
             display.blit(self.reverse_camera_decoder.surface, (int(6 * self.hud.dim[0] / 16), 0))
-        if self.side_mirror_camera_decoders[0].surface is not None:
-            display.blit(self.side_mirror_camera_decoders[0].surface,
-                         (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
-        if self.side_mirror_camera_decoders[1].surface is not None:
-            display.blit(self.side_mirror_camera_decoders[1].surface,
-                         (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
+        # if self.side_mirror_camera_decoders[0].surface is not None:
+        #     display.blit(self.side_mirror_camera_decoders[0].surface,
+        #                  (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
+        # if self.side_mirror_camera_decoders[1].surface is not None:
+        #     display.blit(self.side_mirror_camera_decoders[1].surface,
+        #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
 
 def _decode(weak_self, byte_data):
