@@ -69,22 +69,22 @@ def game_loop(args):
 
         # print(client.get_encrpyt_pub_key())
 
-        display = pygame.display.set_mode(
-            (args.width, args.height),
-            pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE | pygame.SCALED)
-
         # display = pygame.display.set_mode(
         #     (args.width, args.height),
-        #     pygame.HWSURFACE | pygame.FULLSCREEN )
+        #     pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE | pygame.SCALED)
+
+        display = pygame.display.set_mode(
+            (args.width, args.height),
+            pygame.HWSURFACE | pygame.FULLSCREEN )
 
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args.filter)
         controller = DualControl(world, args.autopilot)
 
-        # device = evdev.list_devices()[0]
-        # evtdev = InputDevice(device)
-        # val = 20000  # val \in [0,65535]
-        # evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
+        device = evdev.list_devices()[0]
+        evtdev = InputDevice(device)
+        val = 20000  # val \in [0,65535]
+        evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
 
         clock = pygame.time.Clock()
         while True:
