@@ -21,7 +21,7 @@ def decode_loop(bytes_q, shm_decoded, terminate):
             thread_type="SLICE",
             index=0,
             plugin="pyav",
-            extension=".mpeg",
+            extension=".m4v",
         )
 
         b = np.ndarray(frames.shape, dtype=frames.dtype, buffer=shm_decoded.buf)
