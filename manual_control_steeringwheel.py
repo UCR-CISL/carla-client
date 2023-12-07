@@ -69,13 +69,13 @@ def game_loop(args):
 
         # print(client.get_encrpyt_pub_key())
 
-        # display = pygame.display.set_mode(
-        #     (args.width, args.height),
-        #     pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE | pygame.SCALED)
-
         display = pygame.display.set_mode(
             (args.width, args.height),
-            pygame.HWSURFACE | pygame.FULLSCREEN )
+            pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE | pygame.SCALED)
+
+        # display = pygame.display.set_mode(
+        #     (args.width, args.height),
+        #     pygame.HWSURFACE | pygame.FULLSCREEN )
 
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args.filter)
