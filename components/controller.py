@@ -37,19 +37,21 @@ except ImportError:
 
 
 class DualControl(object):
-    def __init__(self, world, start_in_autopilot):
-        self._autopilot_enabled = start_in_autopilot
-        if isinstance(world.player, carla.Vehicle):
-            self._control = carla.VehicleControl()
-            world.player.set_autopilot(self._autopilot_enabled)
-        elif isinstance(world.player, carla.Walker):
-            self._control = carla.WalkerControl()
-            self._autopilot_enabled = False
-            self._rotation = world.player.get_transform().rotation
-        else:
-            raise NotImplementedError("Actor type not supported")
+    def __init__(self):
+        self._control = carla.VehicleControl()
+
+        self._autopilot_enabled = False
+        # if isinstance(world.player, carla.Vehicle):
+        #     self._control = carla.VehicleControl()
+        #     world.player.set_autopilot(self._autopilot_enabled)
+        # elif isinstance(world.player, carla.Walker):
+        #     self._control = carla.WalkerControl()
+        #     self._autopilot_enabled = False
+        #     self._rotation = world.player.get_transform().rotation
+        # else:
+        #     raise NotImplementedError("Actor type not supported")
         self._steer_cache = 0.0
-        world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
+        # world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
         # initialize steering wheel
         pygame.joystick.init()
@@ -58,9 +60,9 @@ class DualControl(object):
         if joystick_count > 1:
             raise ValueError("Please Connect Just One Joystick")
 
-        self._joystick = None
-        self._joystick = pygame.joystick.Joystick(0)
-        self._joystick.init()
+        # self._joystick = None
+        # self._joystick = pygame.joystick.Joystick(0)
+        # self._joystick.init()
 
         self._parser = ConfigParser()
         self._parser.read('wheel_config.ini')
@@ -70,13 +72,27 @@ class DualControl(object):
             self._parser.get('G920 Racing Wheel', 'throttle'))
         self._brake_idx = int(self._parser.get('G920 Racing Wheel', 'brake'))
         self._reverse_idx = int(self._parser.get('G920 Racing Wheel', 'reverse'))
-        self._handbrake_idx = int(
-            self._parser.get('G920 Racing Wheel', 'handbrake'))
+        self._handbrake_idx = int(self._parser.get('G920 Racing Wheel', 'handbrake'))
+
+        self.steering_mode = int(self._parser.get('Sensitivity', 'mode'))
+        self.steering_sensitivity_min = float(self._parser.get('Sensitivity', 'min'))
+        self.steering_sensitivity_max = float(self._parser.get('Sensitivity', 'max'))
 
     def parse_events(self, world, clock):
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        world.menu.update_events(events)
+        if world.menu.is_enabled():
+            return
+        for event in events:
             if event.type == pygame.QUIT:
                 return True
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x, y, w, h = world.hud.settings_button.get_region()
+                mouse = pygame.mouse.get_pos()
+                # if the mouse is clicked on the
+                # button the game is terminated
+                if world.menu.settings_button.clickable and x <= mouse[0] <= x + w and y <= mouse[1] <= y + h:
+                    world.menu.toggle_menu(False)
             elif event.type == pygame.JOYBUTTONDOWN:
                 if event.button == js.BUTTON_A:
                     world.restart()
@@ -132,10 +148,8 @@ class DualControl(object):
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
                 self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
-                self._parse_vehicle_wheel()
+                # self._parse_vehicle_wheel()
                 self._control.reverse = self._control.gear < 0
-            elif isinstance(self._control, carla.WalkerControl):
-                self._parse_walker_keys(pygame.key.get_pressed(), clock.get_time())
             world.player.apply_control(self._control)
 
     def _parse_vehicle_keys(self, keys, milliseconds):
@@ -163,7 +177,7 @@ class DualControl(object):
         # For the steering, it seems fine as it is
         K1 = 1.0  # 0.55
         # steerCmd = K1 * math.tan(1.1 * jsInputs[self._steer_idx])
-        steerCmd = jsInputs[self._steer_idx]
+        steerCmd = jsInputs[self._steer_idx] * self.steering_sensitivity_min
 
         K2 = 1.6  # 1.6
         throttleCmd = K2 + (2.05 * math.log10(
@@ -188,21 +202,17 @@ class DualControl(object):
 
         self._control.hand_brake = bool(jsButtons[self._handbrake_idx])
 
-    def _parse_walker_keys(self, keys, milliseconds):
-        self._control.speed = 0.0
-        if keys[K_DOWN] or keys[K_s]:
-            self._control.speed = 0.0
-        if keys[K_LEFT] or keys[K_a]:
-            self._control.speed = .01
-            self._rotation.yaw -= 0.08 * milliseconds
-        if keys[K_RIGHT] or keys[K_d]:
-            self._control.speed = .01
-            self._rotation.yaw += 0.08 * milliseconds
-        if keys[K_UP] or keys[K_w]:
-            self._control.speed = 5.556 if pygame.key.get_mods() & KMOD_SHIFT else 2.778
-        self._control.jump = keys[K_SPACE]
-        self._rotation.yaw = round(self._rotation.yaw, 1)
-        self._control.direction = self._rotation.get_forward_vector()
+    def update_steering_config(self, steering_config):
+        self.steering_mode = steering_config[0]
+        self.steering_sensitivity_min = steering_config[1]
+        self.steering_sensitivity_max = steering_config[2]
+        self._parser.set('Sensitivity', 'mode', str(self.steering_mode))
+        self._parser.set('Sensitivity', 'min', str(self.steering_sensitivity_min))
+        self._parser.set('Sensitivity', 'max', str(self.steering_sensitivity_max))
+
+    def save_config_file(self):
+        with open('wheel_config.ini', 'w') as configfile:  # save
+            self._parser.write(configfile)
 
     @staticmethod
     def _is_quit_shortcut(key):

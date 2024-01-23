@@ -5,9 +5,10 @@ from components.views import CameraManager
 
 
 class World(object):
-    def __init__(self, carla_world, hud, actor_filter):
+    def __init__(self, carla_world, hud, menu, actor_filter):
         self.world = carla_world
         self.hud = hud
+        self.menu = menu
         self.player = None
         # self.collision_sensor = None
         # self.lane_invasion_sensor = None
@@ -64,6 +65,7 @@ class World(object):
     def render(self, display):
         self.camera_manager.render(display)
         self.hud.render(display)
+        self.menu.render(display)
 
     def destroy(self):
         sensors = [

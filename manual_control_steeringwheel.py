@@ -25,6 +25,7 @@ from __future__ import print_function
 # ==============================================================================
 
 import pygame
+import pygame_menu
 import glob
 import os
 import sys
@@ -43,7 +44,7 @@ from evdev import ecodes, InputDevice
 # -- imports -------------------------------------------------------------------
 # ==============================================================================
 
-from components.display import HUD
+from components.display import HUD, SettingsMenu
 from components.controller import DualControl
 from components.game import World
 
@@ -69,28 +70,37 @@ def game_loop(args):
 
         # print(client.get_encrpyt_pub_key())
 
-        # display = pygame.display.set_mode(
-        #     (args.width, args.height),
-        #     pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE | pygame.SCALED)
-
         display = pygame.display.set_mode(
             (args.width, args.height),
-            pygame.HWSURFACE | pygame.FULLSCREEN )
+            pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE | pygame.SCALED)
 
+        # display = pygame.display.set_mode(
+        #     (args.width, args.height),
+        #     pygame.HWSURFACE | pygame.FULLSCREEN )
+
+        controller = DualControl()
+        steering_config = (
+            controller.steering_mode, controller.steering_sensitivity_min, controller.steering_sensitivity_max)
         hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args.filter)
-        controller = DualControl(world, args.autopilot)
+        settings_menu = SettingsMenu(display, steering_config)
+        world = World(client.get_world(), hud, settings_menu, args.filter)
 
-        device = evdev.list_devices()[0]
-        evtdev = InputDevice(device)
-        val = 20000  # val \in [0,65535]
-        evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
+        # device = evdev.list_devices()[0]
+        # evtdev = InputDevice(device)
+        # val = 20000  # val \in [0,65535]
+        # evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
 
         clock = pygame.time.Clock()
         while True:
             clock.tick_busy_loop(60)
             if controller.parse_events(world, clock):
                 return
+            if settings_menu.config_changed:
+                controller.update_steering_config(settings_menu.get_steering_config())
+                settings_menu.config_changed = False
+            if settings_menu.config_save:
+                controller.save_config_file()
+                settings_menu.config_save = False
             world.tick(clock)
             world.render(display)
             pygame.display.flip()

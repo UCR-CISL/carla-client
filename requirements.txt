@@ -1,3 +1,5 @@
+pygame
+pygame-menu
 evdev
 av
 imageio
