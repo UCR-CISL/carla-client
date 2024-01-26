@@ -70,7 +70,7 @@ class CameraManager(object):
         self.hud = hud
         self.recording = False
         self._camera_transforms = [
-            carla.Transform(carla.Location(x=0.1, y=-0.2, z=1.3), carla.Rotation(pitch=0)),  # First person
+            carla.Transform(carla.Location(x=0.23, y=-0.3, z=1.25), carla.Rotation(pitch=0)),  # First person
             carla.Transform(carla.Location(x=0.1, y=-0.2, z=1.3), carla.Rotation(yaw=-60)),  # Left side view
             carla.Transform(carla.Location(x=0.1, y=-0.2, z=1.3), carla.Rotation(yaw=60)),  # Right side view
 

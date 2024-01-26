@@ -166,7 +166,7 @@ class SettingsMenu(object):
         self.config_save = save
 
     def mode_change(self, mode):
-        self.steering_config[0] = mode
+        self.steering_config[0] = 1 if mode else 0
         self.sliders[mode].show()
         self.sliders[1 - mode].hide()
         self.config_changed = True

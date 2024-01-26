@@ -60,9 +60,9 @@ class DualControl(object):
         if joystick_count > 1:
             raise ValueError("Please Connect Just One Joystick")
 
-        # self._joystick = None
-        # self._joystick = pygame.joystick.Joystick(0)
-        # self._joystick.init()
+        self._joystick = None
+        self._joystick = pygame.joystick.Joystick(0)
+        self._joystick.init()
 
         self._parser = ConfigParser()
         self._parser.read('wheel_config.ini')
@@ -78,9 +78,17 @@ class DualControl(object):
         self.steering_sensitivity_min = float(self._parser.get('Sensitivity', 'min'))
         self.steering_sensitivity_max = float(self._parser.get('Sensitivity', 'max'))
 
+        self._mph = 0
+
+        self._lights = carla.VehicleLightState.NONE
+
     def parse_events(self, world, clock):
         events = pygame.event.get()
         world.menu.update_events(events)
+
+        v = world.player.get_velocity()
+        self._mph = 0.621371 * 3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2)
+
         if world.menu.is_enabled():
             return
         for event in events:
@@ -102,6 +110,12 @@ class DualControl(object):
                     world.next_weather()
                 elif event.button == self._reverse_idx:
                     self._control.gear = 1 if self._control.reverse else -1
+                elif event.button == js.BUTTON_GEAR_DOWN:
+                    self._lights ^= carla.VehicleLightState.LeftBlinker
+                    world.player.set_light_state(carla.VehicleLightState(self._lights))
+                elif event.button == js.BUTTON_GEAR_UP:
+                    self._lights ^= carla.VehicleLightState.RightBlinker
+                    world.player.set_light_state(carla.VehicleLightState(self._lights))
 
             elif event.type == pygame.JOYHATMOTION:
                 if event.value == js.HAT_LEFT:
@@ -136,10 +150,10 @@ class DualControl(object):
                         self._control.gear = world.player.get_control().gear
                         world.hud.notification('%s Transmission' %
                                                ('Manual' if self._control.manual_gear_shift else 'Automatic'))
-                    elif self._control.manual_gear_shift and event.key == K_COMMA:
-                        self._control.gear = max(-1, self._control.gear - 1)
-                    elif self._control.manual_gear_shift and event.key == K_PERIOD:
-                        self._control.gear = self._control.gear + 1
+                    # elif self._control.manual_gear_shift and event.key == K_COMMA:
+                    #     self._control.gear = max(-1, self._control.gear - 1)
+                    # elif self._control.manual_gear_shift and event.key == K_PERIOD:
+                    #     self._control.gear = self._control.gear + 1
                     elif event.key == K_p:
                         self._autopilot_enabled = not self._autopilot_enabled
                         world.player.set_autopilot(self._autopilot_enabled)
@@ -148,7 +162,7 @@ class DualControl(object):
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
                 self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
-                # self._parse_vehicle_wheel()
+                self._parse_vehicle_wheel()
                 self._control.reverse = self._control.gear < 0
             world.player.apply_control(self._control)
 
@@ -177,7 +191,15 @@ class DualControl(object):
         # For the steering, it seems fine as it is
         K1 = 1.0  # 0.55
         # steerCmd = K1 * math.tan(1.1 * jsInputs[self._steer_idx])
-        steerCmd = jsInputs[self._steer_idx] * self.steering_sensitivity_min
+
+        if self._mph < 20:
+            sensitivity = self.steering_sensitivity_min
+        elif 20 <= self._mph < 65:
+            sensitivity = (self._mph - 20) / (65 - 20) * (self.steering_sensitivity_max - self.steering_sensitivity_min)
+        else:
+            sensitivity = self.steering_sensitivity_max
+
+        steerCmd = jsInputs[self._steer_idx] * sensitivity
 
         K2 = 1.6  # 1.6
         throttleCmd = K2 + (2.05 * math.log10(

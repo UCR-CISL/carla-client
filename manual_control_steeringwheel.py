@@ -84,6 +84,8 @@ def game_loop(args):
         hud = HUD(args.width, args.height)
         settings_menu = SettingsMenu(display, steering_config)
         world = World(client.get_world(), hud, settings_menu, args.filter)
+        weather = carla.WeatherParameters(sun_altitude_angle=70.0)
+        print(world.world.set_weather(weather))
 
         # device = evdev.list_devices()[0]
         # evtdev = InputDevice(device)
@@ -149,7 +151,7 @@ def main():
     argparser.add_argument(
         '--filter',
         metavar='PATTERN',
-        default='vehicle.mercedes.coupe',
+        default='vehicle.dodge.charger_2020',
         help='actor filter (default: "vehicle.*")')
     args = argparser.parse_args()
 
