@@ -7,7 +7,7 @@ import imageio.v3 as iio
 import multiprocessing
 from multiprocessing import shared_memory
 import ctypes
-
+from components.record import save_image
 
 def decode_loop(bytes_q, shm_decoded, terminate):
     while not terminate.value:
@@ -133,11 +133,13 @@ class CameraManager(object):
                 self.reverse_camera_decoder = None
 
             self.driver_camera_decoder = self._decoder_setup(self.driver_view_info[0][-1],
-                                                             self._camera_transforms[0])
+                                                             self._camera_transforms[0], 
+                                                             "driver")
             self.driver_camera_decoder.start()
 
             self.reverse_camera_decoder = self._decoder_setup(self.reverse_mirror_info[0][-1],
-                                                              self._reverse_mirror_transforms[0])
+                                                              self._reverse_mirror_transforms[0], 
+                                                              "reverse")
             self.reverse_camera_decoder.start()
 
             # for i in range(2):
@@ -150,9 +152,11 @@ class CameraManager(object):
             self.hud.notification(self.driver_view_info[index][2])
         self.index = index
 
-    def _decoder_setup(self, bp, transform):
+    #TODO: Check for unique camera names
+    def _decoder_setup(self, bp, transform, cam_type):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
         decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int())
+        camera.listen(lambda image: save_image(image, cam_type))
         return decoder
 
     def _switch_side_view(self):
