@@ -33,7 +33,7 @@ import carla
 import argparse
 import logging
 from components.record import get_vehicle_position
-# import json
+import json
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -44,7 +44,7 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-    position_data = {}
+    position_data = []
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(5.0)
@@ -98,9 +98,11 @@ def game_loop(args):
                 settings_menu.config_save = False
             world.tick(clock)
             world.render(display)
-            # snapshot = world.get_snapshot()
-            # frame = snapshot.frame
-            # position_data.append(get_vehicle_position(frame, world.player))
+
+            snapshot = client.get_world().get_snapshot()
+            frame = snapshot.frame
+            position_data.append(get_vehicle_position(frame, world.player))
+            
             pygame.display.flip()
 
     finally:
@@ -109,9 +111,9 @@ def game_loop(args):
         pygame.quit()
 
     # Save position data as .json file
-    #     with open("vehicle_positional_data.json", "w") as f: 
-    #         json.dump(position_data, f, indent=4)
-    #     print("Position data json file saved")
+        with open("vehicle_positional_data.json", "w") as f: 
+            json.dump(position_data, f, indent=4)
+        print("Position data json file saved")
 
         print('\nCancelled by user. Bye!')
 
