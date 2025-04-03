@@ -7,7 +7,7 @@ import imageio.v3 as iio
 import multiprocessing
 from multiprocessing import shared_memory
 import ctypes
-from components.record import save_image
+from components.record import save_image2
 
 def decode_loop(bytes_q, shm_decoded, terminate):
     while not terminate.value:
@@ -156,7 +156,7 @@ class CameraManager(object):
     def _decoder_setup(self, bp, transform, cam_type):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
         decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int())
-        camera.listen(lambda image: save_image(image, cam_type))
+        # camera.listen(lambda image: save_image(image, cam_type))
         return decoder
 
     def _switch_side_view(self):
@@ -197,3 +197,5 @@ def _decode(weak_self, byte_data):
 
     data = np.ndarray(self.decoded_shape, dtype=np.uint8, buffer=self.shm_decoded.buf)
     self.surface = pygame.surfarray.make_surface(data.swapaxes(0, 1))
+
+    save_image2(data, byte_data.frame)

@@ -31,3 +31,11 @@ def save_image(image, cam_type, save_folder="images"):
     iio.imwrite(save_path, image_data)
 
 
+def save_image2(image_data, frame, save_folder="images"):
+    if 1080 in image_data.shape:
+        cam_type = "driver"
+    else:
+        cam_type = "reverse"
+    file_name = f"frame_{frame}.png"
+    save_path = os.path.join(save_folder, cam_type, file_name)
+    iio.imwrite(save_path, image_data)

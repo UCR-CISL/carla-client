@@ -98,9 +98,9 @@ def game_loop(args):
                 settings_menu.config_save = False
             world.tick(clock)
             world.render(display)
-            snapshot = world.get_snapshot()
-            frame = snapshot.frame
-            position_data.append(get_vehicle_position(frame, world.player))
+            # snapshot = world.get_snapshot()
+            # frame = snapshot.frame
+            # position_data.append(get_vehicle_position(frame, world.player))
             pygame.display.flip()
 
     finally:
