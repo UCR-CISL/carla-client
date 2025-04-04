@@ -1,0 +1,37 @@
+[
+    {
+        "type": "KEYUP",
+        "key": "w",
+        "time": 2782
+    },
+    {
+        "type": "KEYUP",
+        "key": "a",
+        "time": 6239
+    },
+    {
+        "type": "KEYUP",
+        "key": "w",
+        "time": 7232
+    },
+    {
+        "type": "KEYUP",
+        "key": "d",
+        "time": 7472
+    },
+    {
+        "type": "KEYUP",
+        "key": "d",
+        "time": 8021
+    },
+    {
+        "type": "KEYUP",
+        "key": "d",
+        "time": 9241
+    },
+    {
+        "type": "KEYUP",
+        "key": "w",
+        "time": 9693
+    }
+]

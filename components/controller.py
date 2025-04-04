@@ -3,6 +3,7 @@ import pygame
 import math
 import joystick_lookup as js
 from configparser import ConfigParser
+import json
 
 try:
     from pygame.locals import *
@@ -35,6 +36,7 @@ class SteeringwheelController(object):
         self._mph = 0
 
         self._lights = carla.VehicleLightState.NONE
+        self.input_log = []
 
     def parse_events(self, world, clock):
         events = pygame.event.get()
@@ -46,6 +48,7 @@ class SteeringwheelController(object):
         if world.menu.is_enabled():
             return
         for event in events:
+            timestamp = pygame.time.get_ticks()
             if event.type == pygame.QUIT:
                 return True
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -54,6 +57,7 @@ class SteeringwheelController(object):
                 if world.menu.settings_button.clickable and x <= mouse[0] <= x + w and y <= mouse[1] <= y + h:
                     world.menu.toggle_menu(False)
             elif event.type == pygame.JOYBUTTONDOWN:
+                self.input_log.append({"type": "JOYBUTTONDOWN", "button": event.button, "time": timestamp})
                 if event.button == js.BUTTON_A:
                     world.restart()
                 elif event.button == js.BUTTON_MENU:
@@ -70,6 +74,7 @@ class SteeringwheelController(object):
                     world.player.set_light_state(carla.VehicleLightState(self._lights))
 
             elif event.type == pygame.JOYHATMOTION:
+                self.input_log.append({"type": "JOYHATMOTION", "value": event.value, "time": timestamp})
                 if event.value == js.HAT_LEFT:
                     world.camera_manager.toggle_side_view(1)
                 elif event.value == js.HAT_RIGHT:
@@ -80,6 +85,7 @@ class SteeringwheelController(object):
                     world.camera_manager.toggle_side_view(0)
 
             elif event.type == pygame.KEYUP:
+                self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": timestamp})
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -186,6 +192,9 @@ class SteeringwheelController(object):
     def _is_quit_shortcut(key):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
 
+    def save_inputs_to_file(self): 
+        with open("inputs_log_steeringwheel.json", "w") as f: 
+            json.dump(self.input_log, f, indent=4)
 
 class KeyboardController(object):
     """Class that handles keyboard input."""
@@ -194,6 +203,7 @@ class KeyboardController(object):
         self._control = carla.VehicleControl()
         self._lights = carla.VehicleLightState.NONE
         self._steer_cache = 0.0
+        self.input_log = []
 
     def parse_events(self, world, clock):
         if isinstance(self._control, carla.VehicleControl):
@@ -202,6 +212,7 @@ class KeyboardController(object):
             if event.type == pygame.QUIT:
                 return True
             elif event.type == pygame.KEYUP:
+                self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": pygame.time.get_ticks()})
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -356,3 +367,7 @@ class KeyboardController(object):
     @staticmethod
     def _is_quit_shortcut(key):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
+    
+    def save_inputs_to_file(self): 
+        with open("inputs_log_keyboard.json", "w") as f: 
+            json.dump(self.input_log, f, indent=4)

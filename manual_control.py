@@ -80,7 +80,7 @@ def game_loop(args):
         world.world.set_weather(weather)
 
         # TODO: force feedback adjust. Not working on G923.
-        # device = evdev.list_devices()[0]
+        # device = evdev.list_devices()[0]e
         # evtdev = InputDevice(device)
         # val = 20000  # val \in [0,65535]
         # evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
@@ -114,6 +114,9 @@ def game_loop(args):
         with open("vehicle_positional_data.json", "w") as f: 
             json.dump(position_data, f, indent=4)
         print("Position data json file saved")
+
+        controller.save_inputs_to_file()
+        print("Inputs saved")
 
         print('\nCancelled by user. Bye!')
 
