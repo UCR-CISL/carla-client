@@ -1,37 +1,37 @@
 [
     {
         "type": "KEYUP",
-        "key": "w",
-        "time": 2782
-    },
-    {
-        "type": "KEYUP",
         "key": "a",
-        "time": 6239
+        "time": 5036
     },
     {
         "type": "KEYUP",
         "key": "w",
-        "time": 7232
+        "time": 5405
     },
     {
         "type": "KEYUP",
-        "key": "d",
-        "time": 7472
-    },
-    {
-        "type": "KEYUP",
-        "key": "d",
-        "time": 8021
-    },
-    {
-        "type": "KEYUP",
-        "key": "d",
-        "time": 9241
+        "key": "s",
+        "time": 5997
     },
     {
         "type": "KEYUP",
         "key": "w",
-        "time": 9693
+        "time": 6941
+    },
+    {
+        "type": "KEYUP",
+        "key": "w",
+        "time": 7165
+    },
+    {
+        "type": "KEYUP",
+        "key": "w",
+        "time": 7405
+    },
+    {
+        "type": "KEYUP",
+        "key": "w",
+        "time": 7661
     }
 ]

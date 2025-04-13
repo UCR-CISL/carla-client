@@ -34,6 +34,9 @@ import argparse
 import logging
 from components.record import get_vehicle_position
 import json
+from record_latency import RecordLatency
+import time 
+import os 
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -41,6 +44,7 @@ import json
 
 
 def game_loop(args):
+    recordlatency = RecordLatency()
     pygame.init()
     pygame.font.init()
     world = None
@@ -64,18 +68,18 @@ def game_loop(args):
         if joystick_count >= 1:
             joystick = pygame.joystick.Joystick(0)
             joystick.init()
-            controller = SteeringwheelController(joystick)
+            controller = SteeringwheelController(joystick, recordlatency)
             steering_config = (
                 controller.steering_mode, controller.steering_sensitivity_min, controller.steering_sensitivity_max)
             if joystick_count > 1:
                 raise ValueError("More than one joystick connected. Using joystick 0 as default.")
         else:
-            controller = KeyboardController(False)
+            controller = KeyboardController(False, recordlatency)
             steering_config = (0, 0.5, 0.5)  # Dummy config for keyboard controller
 
         hud = HUD(args.width, args.height)
         settings_menu = SettingsMenu(display, steering_config)
-        world = World(client.get_world(), hud, settings_menu, args.filter)
+        world = World(client.get_world(), hud, settings_menu, args.filter, recordlatency, args.save_folder)
         weather = carla.WeatherParameters(sun_altitude_angle=70.0)
         world.world.set_weather(weather)
 
@@ -87,8 +91,12 @@ def game_loop(args):
 
         clock = pygame.time.Clock()
         while True:
+            start = time.time()
             clock.tick_busy_loop(60)
-            if controller.parse_events(world, clock):
+            snapshot = client.get_world().get_snapshot()
+            frame = snapshot.frame
+            
+            if controller.parse_events(world, clock, frame):
                 break
             if settings_menu.config_changed:
                 controller.update_steering_config(settings_menu.get_steering_config())
@@ -96,14 +104,27 @@ def game_loop(args):
             if settings_menu.config_save:
                 controller.save_config_file()
                 settings_menu.config_save = False
+            
+            start_position = time.time()
+            position, start_get_position, end_get_position = get_vehicle_position(frame, world.player)
+            position_data.append(position)
+            end_position = time.time() 
+
+            recordlatency.update_df("Start Get Vehicle Position (on manual_control.py Side)", timestamp=start_position, frame=frame)
+            recordlatency.update_df("End Get Vehicle Position (on manual_control.py Side)", timestamp=end_position, frame=frame)
+
+            recordlatency.update_df("Start Get Vehicle Position (on record.py Side)", timestamp=start_get_position, frame=frame)
+            recordlatency.update_df("End Get Vehicle Position (on record.py Side)", timestamp=end_get_position, frame=frame)
+            
             world.tick(clock)
             world.render(display)
-
-            snapshot = client.get_world().get_snapshot()
-            frame = snapshot.frame
-            position_data.append(get_vehicle_position(frame, world.player))
             
             pygame.display.flip()
+
+            end = time.time()
+
+            recordlatency.update_df(f"Start of Frame {frame}", timestamp=start, frame=frame)
+            recordlatency.update_df(f"End of Frame {frame}", timestamp=end, frame=frame)
 
     finally:
         if world is not None:
@@ -111,15 +132,17 @@ def game_loop(args):
         pygame.quit()
 
     # Save position data as .json file
-        with open("vehicle_positional_data.json", "w") as f: 
+        save_vehicle_position = os.path.join(args.save_folder, "vehicle_positional_data.json")
+        with open(save_vehicle_position, "w") as f: 
             json.dump(position_data, f, indent=4)
         print("Position data json file saved")
 
         controller.save_inputs_to_file()
         print("Inputs saved")
 
+        recordlatency.save_path = os.path.join(args.save_folder, "latency.csv")
+        recordlatency.save_to_csv()
         print('\nCancelled by user. Bye!')
-
 
 def main():
     argparser = argparse.ArgumentParser(
@@ -155,9 +178,9 @@ def main():
         default='vehicle.dodge.charger_2020',
         help='actor filter (default: "vehicle.*")')
     argparser.add_argument(
-        '--save_path',
-        default='test',
-        help='Path to save .json file')
+        '--save_folder',
+        default='latency_performance',
+        help='Folder path to save latency results and recordings')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]

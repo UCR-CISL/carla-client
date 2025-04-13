@@ -13,17 +13,12 @@ docker run --privileged --gpus all --net=host -e DISPLAY=$DISPLAY kevinliuzc/car
 ```
 ## Running Client and Recording Sensor Data 
 
-To run the Carla client, first pull the Docker image 
+To run the Carla client, first build the Docker  
 ```commandline 
-docker pull kevinliuzc/carla-client
+docker build -f Dockerfile.dockerfile -t cisl/client-latency-recording .
 ```
 
 Then run a Carla client container
 ```commandline 
-docker run --privileged --gpus all --net=host -e DISPLAY=$DISPLAY -v $(pwd):/app --rm -it --entrypoint /bin/bash kevinliuzc/carla-client
-```
-
-Within the container, run 
-```commandline 
-python3 manual_control.py 
+docker run --privileged --gpus all --net=host -e DISPLAY=$DISPLAY -v ./:/app cisl/client-latency-recording
 ```

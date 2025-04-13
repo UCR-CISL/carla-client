@@ -2,9 +2,11 @@ import carla
 import numpy as np 
 import imageio.v3 as iio
 import os 
+import time 
 
 #TODO: Determine format for .json to hold vehicle position for each frame
 def get_vehicle_position(frame, vehicle): 
+    start = time.time()
     transform = vehicle.get_transform()
         
     frame_data = {
@@ -17,8 +19,8 @@ def get_vehicle_position(frame, vehicle):
                     "pitch" : transform.rotation.pitch, 
                     "roll" : transform.rotation.roll
                     }
-    
-    return frame_data 
+    end = time.time()
+    return frame_data, start, end
 
 #TODO: Change to include user inputted save_folder
 def save_image(image, cam_type, save_folder="images"):
@@ -30,12 +32,17 @@ def save_image(image, cam_type, save_folder="images"):
     save_path = os.path.join(save_folder, cam_type, file_name)
     iio.imwrite(save_path, image_data)
 
-
-def save_image2(image_data, frame, save_folder="images"):
+#TODO: Check if directory exists 
+def save_image2(image_data, frame, save_folder="latency_performance"):
+    start = time.time()
     if 1080 in image_data.shape:
         cam_type = "driver"
     else:
         cam_type = "reverse"
     file_name = f"frame_{frame}.png"
-    save_path = os.path.join(save_folder, cam_type, file_name)
+    save_dir = os.path.join(save_folder, "images")
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, cam_type, file_name)
     iio.imwrite(save_path, image_data)
+    end = time.time() 
+    return start, end, file_name

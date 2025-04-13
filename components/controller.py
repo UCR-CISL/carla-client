@@ -4,6 +4,7 @@ import math
 import joystick_lookup as js
 from configparser import ConfigParser
 import json
+import time 
 
 try:
     from pygame.locals import *
@@ -12,9 +13,10 @@ except ImportError:
 
 
 class SteeringwheelController(object):
-    def __init__(self, joystick):
+    def __init__(self, joystick, recordlatency):
         self._control = carla.VehicleControl()
         self._steer_cache = 0.0
+        self.recordlatency = recordlatency
         # world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
         self._joystick = joystick
@@ -38,7 +40,7 @@ class SteeringwheelController(object):
         self._lights = carla.VehicleLightState.NONE
         self.input_log = []
 
-    def parse_events(self, world, clock):
+    def parse_events(self, world, clock, frame):
         events = pygame.event.get()
         world.menu.update_events(events)
 
@@ -57,7 +59,11 @@ class SteeringwheelController(object):
                 if world.menu.settings_button.clickable and x <= mouse[0] <= x + w and y <= mouse[1] <= y + h:
                     world.menu.toggle_menu(False)
             elif event.type == pygame.JOYBUTTONDOWN:
-                self.input_log.append({"type": "JOYBUTTONDOWN", "button": event.button, "time": timestamp})
+                start_joydown = time.time()
+                self.input_log.append({"type": "JOYBUTTONDOWN", "button": event.button, "time": timestamp, "frame": frame})
+                end_joydown = time.time() 
+                self.recordlatency.update_df(event="Start of JOYBUTTONDOWN", timestamp=start_joydown, frame=frame)
+                self.recordlatency.update_df(event="End of JOYBUTTONDOWN", timestamp=end_joydown, frame=frame)
                 if event.button == js.BUTTON_A:
                     world.restart()
                 elif event.button == js.BUTTON_MENU:
@@ -74,7 +80,11 @@ class SteeringwheelController(object):
                     world.player.set_light_state(carla.VehicleLightState(self._lights))
 
             elif event.type == pygame.JOYHATMOTION:
+                start_joyhatmotion = time.time()
                 self.input_log.append({"type": "JOYHATMOTION", "value": event.value, "time": timestamp})
+                end_joyhatmotion = time.time()
+                self.recordlatency.update_df(event="Start of JOYHATMOTION", timestamp=start_joyhatmotion, frame=frame)
+                self.recordlatency.update_df(event="End of JOYHATMOTION", timestamp=end_joyhatmotion, frame=frame)
                 if event.value == js.HAT_LEFT:
                     world.camera_manager.toggle_side_view(1)
                 elif event.value == js.HAT_RIGHT:
@@ -85,7 +95,11 @@ class SteeringwheelController(object):
                     world.camera_manager.toggle_side_view(0)
 
             elif event.type == pygame.KEYUP:
+                start_keup = time.time()
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": timestamp})
+                end_keyup = time.time()
+                self.recordlatency.update_df(event="Start of KEYUP", timestamp=start_joyhatmotion, frame=frame)
+                self.recordlatency.update_df(event="End of KEYUP", timestamp=end_joyhatmotion, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -193,26 +207,31 @@ class SteeringwheelController(object):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
 
     def save_inputs_to_file(self): 
-        with open("inputs_log_steeringwheel.json", "w") as f: 
+        with open("latency_performance/inputs_log_steeringwheel.json", "w") as f: 
             json.dump(self.input_log, f, indent=4)
 
 class KeyboardController(object):
     """Class that handles keyboard input."""
 
-    def __init__(self, start_in_autopilot):
+    def __init__(self, start_in_autopilot, recordlatency):
         self._control = carla.VehicleControl()
         self._lights = carla.VehicleLightState.NONE
         self._steer_cache = 0.0
         self.input_log = []
+        self.recordlatency = recordlatency
 
-    def parse_events(self, world, clock):
+    def parse_events(self, world, clock, frame):
         if isinstance(self._control, carla.VehicleControl):
             current_lights = self._lights
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return True
             elif event.type == pygame.KEYUP:
+                start_keyup = time.time() 
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": pygame.time.get_ticks()})
+                end_keyup = time.time()
+                self.recordlatency.update_df(event=f"Start of KEYUP: {pygame.key.name(event.key)}", timestamp=start_keyup, frame=frame)
+                self.recordlatency.update_df(event=f"End of KEYUP: {pygame.key.name(event.key)}", timestamp=end_keyup, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -369,5 +388,5 @@ class KeyboardController(object):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
     
     def save_inputs_to_file(self): 
-        with open("inputs_log_keyboard.json", "w") as f: 
+        with open("latency_performance/inputs_log_keyboard.json", "w") as f: 
             json.dump(self.input_log, f, indent=4)
