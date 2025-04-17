@@ -13,10 +13,11 @@ except ImportError:
 
 
 class SteeringwheelController(object):
-    def __init__(self, joystick, recordlatency):
+    def __init__(self, joystick, recordlatency, record):
         self._control = carla.VehicleControl()
         self._steer_cache = 0.0
         self.recordlatency = recordlatency
+        self.record = record
         # world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
         self._joystick = joystick
@@ -62,8 +63,9 @@ class SteeringwheelController(object):
                 start_joydown = time.time()
                 self.input_log.append({"type": "JOYBUTTONDOWN", "button": event.button, "time": timestamp, "frame": frame})
                 end_joydown = time.time() 
-                self.recordlatency.update_df(event="Start of JOYBUTTONDOWN", timestamp=start_joydown, frame=frame)
-                self.recordlatency.update_df(event="End of JOYBUTTONDOWN", timestamp=end_joydown, frame=frame)
+                if self.record == True: 
+                    self.recordlatency.update_df(event="Start of JOYBUTTONDOWN", timestamp=start_joydown, frame=frame)
+                    self.recordlatency.update_df(event="End of JOYBUTTONDOWN", timestamp=end_joydown, frame=frame)
                 if event.button == js.BUTTON_A:
                     world.restart()
                 elif event.button == js.BUTTON_MENU:
@@ -83,8 +85,9 @@ class SteeringwheelController(object):
                 start_joyhatmotion = time.time()
                 self.input_log.append({"type": "JOYHATMOTION", "value": event.value, "time": timestamp})
                 end_joyhatmotion = time.time()
-                self.recordlatency.update_df(event="Start of JOYHATMOTION", timestamp=start_joyhatmotion, frame=frame)
-                self.recordlatency.update_df(event="End of JOYHATMOTION", timestamp=end_joyhatmotion, frame=frame)
+                if self.record == True: 
+                    self.recordlatency.update_df(event="Start of JOYHATMOTION", timestamp=start_joyhatmotion, frame=frame)
+                    self.recordlatency.update_df(event="End of JOYHATMOTION", timestamp=end_joyhatmotion, frame=frame)
                 if event.value == js.HAT_LEFT:
                     world.camera_manager.toggle_side_view(1)
                 elif event.value == js.HAT_RIGHT:
@@ -98,8 +101,9 @@ class SteeringwheelController(object):
                 start_keup = time.time()
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": timestamp})
                 end_keyup = time.time()
-                self.recordlatency.update_df(event="Start of KEYUP", timestamp=start_joyhatmotion, frame=frame)
-                self.recordlatency.update_df(event="End of KEYUP", timestamp=end_joyhatmotion, frame=frame)
+                if self.record == True: 
+                    self.recordlatency.update_df(event="Start of KEYUP", timestamp=start_joyhatmotion, frame=frame)
+                    self.recordlatency.update_df(event="End of KEYUP", timestamp=end_joyhatmotion, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -213,12 +217,13 @@ class SteeringwheelController(object):
 class KeyboardController(object):
     """Class that handles keyboard input."""
 
-    def __init__(self, start_in_autopilot, recordlatency):
+    def __init__(self, start_in_autopilot, recordlatency, record ):
         self._control = carla.VehicleControl()
         self._lights = carla.VehicleLightState.NONE
         self._steer_cache = 0.0
         self.input_log = []
         self.recordlatency = recordlatency
+        self.record = record
 
     def parse_events(self, world, clock, frame):
         if isinstance(self._control, carla.VehicleControl):
@@ -230,8 +235,9 @@ class KeyboardController(object):
                 start_keyup = time.time() 
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": pygame.time.get_ticks()})
                 end_keyup = time.time()
-                self.recordlatency.update_df(event=f"Start of KEYUP: {pygame.key.name(event.key)}", timestamp=start_keyup, frame=frame)
-                self.recordlatency.update_df(event=f"End of KEYUP: {pygame.key.name(event.key)}", timestamp=end_keyup, frame=frame)
+                if self.record == True: 
+                    self.recordlatency.update_df(event=f"Start of KEYUP: {pygame.key.name(event.key)}", timestamp=start_keyup, frame=frame)
+                    self.recordlatency.update_df(event=f"End of KEYUP: {pygame.key.name(event.key)}", timestamp=end_keyup, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:

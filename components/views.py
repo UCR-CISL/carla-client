@@ -30,7 +30,7 @@ def decode_loop(bytes_q, shm_decoded, terminate):
 
 
 class Decoder:
-    def __init__(self, sensor, width, height, recordlatency, save_folder):
+    def __init__(self, sensor, width, height, recordlatency, save_folder, record):
         self.sensor = sensor
         self.surface = None
 
@@ -41,13 +41,14 @@ class Decoder:
                                                args=(self.bytes_q, self.shm_decoded, self.terminate))
         self.decoded_shape = (height, width, 3)
         self.recordlatency = recordlatency
+        self.record = record
         self.save_folder = save_folder
 
     def start(self):
         self.terminate.value = False
         # We need to pass the lambda a weak reference to self to avoid circular reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data, self.recordlatency, self.save_folder))
+        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data, self.recordlatency, self.save_folder, self.record))
         self.process.start()
 
     def stop(self):
@@ -64,12 +65,12 @@ class Decoder:
 
 
 class CameraManager(object):
-    def __init__(self, parent_actor, hud, recordlatency):
+    def __init__(self, parent_actor, hud, recordlatency, record):
         self.driver_camera_decoder = None
         self.reverse_camera_decoder = None
         self.side_mirror_camera_decoders = []
         self.recordlatency = recordlatency
-
+        self.record = record
         self._parent = parent_actor
         self.hud = hud
         self._camera_transforms = [
@@ -158,7 +159,7 @@ class CameraManager(object):
     #TODO: Check for unique camera names
     def _decoder_setup(self, bp, transform, cam_type, save_folder):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
-        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), self.recordlatency, save_folder)
+        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), self.recordlatency, save_folder, self.record)
         # camera.listen(lambda image: save_image(image, cam_type))
         return decoder
 
@@ -190,7 +191,7 @@ class CameraManager(object):
         #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
 
-def _decode(weak_self, byte_data, recordlatency, save_folder):
+def _decode(weak_self, byte_data, recordlatency, save_folder, record):
     self = weak_self()
     if not self or self.terminate.value:
         return
@@ -201,6 +202,7 @@ def _decode(weak_self, byte_data, recordlatency, save_folder):
     data = np.ndarray(self.decoded_shape, dtype=np.uint8, buffer=self.shm_decoded.buf)
     self.surface = pygame.surfarray.make_surface(data.swapaxes(0, 1))
 
-    start, end, file_name = save_image2(data, byte_data.frame, save_folder)
-    recordlatency.update_df(event=f"Start of Saving Image: {file_name}", timestamp=start, frame=byte_data.frame)
-    recordlatency.update_df(event=f"End of Saving Image: {file_name}", timestamp=end, frame=byte_data.frame)
+    if record == True: 
+        start, end, file_name = save_image2(data, byte_data.frame, save_folder)
+        recordlatency.update_df(event=f"Start of Saving Image: {file_name}", timestamp=start, frame=byte_data.frame)
+        recordlatency.update_df(event=f"End of Saving Image: {file_name}", timestamp=end, frame=byte_data.frame)

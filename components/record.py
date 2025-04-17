@@ -40,9 +40,9 @@ def save_image2(image_data, frame, save_folder="latency_performance"):
     else:
         cam_type = "reverse"
     file_name = f"frame_{frame}.png"
-    save_dir = os.path.join(save_folder, "images")
+    save_dir = os.path.join(save_folder, "images",  cam_type)
     os.makedirs(save_dir, exist_ok=True)
-    save_path = os.path.join(save_dir, cam_type, file_name)
+    save_path = os.path.join(save_dir, file_name)
     iio.imwrite(save_path, image_data)
     end = time.time() 
     return start, end, file_name
