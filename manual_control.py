@@ -125,10 +125,9 @@ def game_loop(args):
 
             end = time.time()
 
-            if record == True:
-                recordlatency.update_df(f"Start of Frame {frame}", timestamp=start, frame=frame)
-                recordlatency.update_df(f"End of Frame {frame}", timestamp=end, frame=frame)
-            # i-=1
+           
+            recordlatency.update_df(f"Start of Frame {frame}", timestamp=start, frame=frame)
+            recordlatency.update_df(f"End of Frame {frame}", timestamp=end, frame=frame)
 
     finally:
         if world is not None:
@@ -142,12 +141,12 @@ def game_loop(args):
                 json.dump(position_data, f, indent=4)
             print("Position data json file saved")
 
-            controller.save_inputs_to_file()
+            controller.save_inputs_to_file(args.save_folder)
             print("Inputs saved")
 
-            recordlatency.save_path = os.path.join(args.save_folder, "latency.csv")
-            recordlatency.save_to_csv()
-            print('\nCancelled by user. Bye!')
+        recordlatency.save_path = os.path.join(args.save_folder, "latency.csv")
+        recordlatency.save_to_csv()
+        print('\nCancelled by user. Bye!')
 
 def main():
     argparser = argparse.ArgumentParser(
@@ -189,7 +188,7 @@ def main():
     argparser.add_argument(
         '--record',
         default=True,
-        help='Enter True to perform latency recording and False to run without latency recording')
+        help='Enter True to perform sensor recording and False to run without sensor recording')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]

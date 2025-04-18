@@ -5,6 +5,7 @@ import joystick_lookup as js
 from configparser import ConfigParser
 import json
 import time 
+import os 
 
 try:
     from pygame.locals import *
@@ -328,7 +329,7 @@ class KeyboardController(object):
                     else:
                         world.hud.notification("Low beam lights")
                         current_lights |= carla.VehicleLightState.LowBeam
-                    if self._lights & carla.VehicleLightState.LowBeam:
+                    if self._inputs_log_keyboard.jsonlights & carla.VehicleLightState.LowBeam:
                         world.hud.notification("Fog lights")
                         current_lights |= carla.VehicleLightState.Fog
                     if self._lights & carla.VehicleLightState.Fog:
@@ -393,6 +394,7 @@ class KeyboardController(object):
     def _is_quit_shortcut(key):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
     
-    def save_inputs_to_file(self): 
-        with open("latency_performance/inputs_log_keyboard.json", "w") as f: 
+    def save_inputs_to_file(self, save_folder="latency_performance"): 
+        save_path = os.path.join(save_folder, "inputs_log_keyboard.json")
+        with open(save_path , "w") as f: 
             json.dump(self.input_log, f, indent=4)

@@ -161,4 +161,4 @@ cython_debug/
 
 !include/*.egg
 
-latency_performance/images/*
+latency_performance/*
