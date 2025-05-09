@@ -204,5 +204,5 @@ def _decode(weak_self, byte_data, recordlatency, save_folder, record):
 
     if record == True: 
         start, end, file_name = save_image2(data, byte_data.frame, save_folder)
-        recordlatency.update_df(event=f"Start of Saving Image: {file_name}", timestamp=start, frame=byte_data.frame)
-        recordlatency.update_df(event=f"End of Saving Image: {file_name}", timestamp=end, frame=byte_data.frame)
+        recordlatency.update_df(event=f"Start of Saving Image", timestamp=start, frame=byte_data.frame)
+        recordlatency.update_df(event=f"End of Saving Image", timestamp=end, frame=byte_data.frame)

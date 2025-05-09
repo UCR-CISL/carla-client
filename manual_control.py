@@ -112,11 +112,11 @@ def game_loop(args):
                 position_data.append(position)
                 end_position = time.time() 
 
-                recordlatency.update_df("Start Get Vehicle Position (on manual_control.py Side)", timestamp=start_position, frame=frame)
-                recordlatency.update_df("End Get Vehicle Position (on manual_control.py Side)", timestamp=end_position, frame=frame)
+                recordlatency.update_df("Start of Get Vehicle Position (on manual_control.py Side)", timestamp=start_position, frame=frame)
+                recordlatency.update_df("End of Get Vehicle Position (on manual_control.py Side)", timestamp=end_position, frame=frame)
 
-                recordlatency.update_df("Start Get Vehicle Position (on record.py Side)", timestamp=start_get_position, frame=frame)
-                recordlatency.update_df("End Get Vehicle Position (on record.py Side)", timestamp=end_get_position, frame=frame)
+                recordlatency.update_df("Start of Get Vehicle Position (on record.py Side)", timestamp=start_get_position, frame=frame)
+                recordlatency.update_df("End of Get Vehicle Position (on record.py Side)", timestamp=end_get_position, frame=frame)
             
             world.tick(clock)
             world.render(display)
@@ -124,10 +124,9 @@ def game_loop(args):
             pygame.display.flip()
 
             end = time.time()
-
-           
-            recordlatency.update_df(f"Start of Frame {frame}", timestamp=start, frame=frame)
-            recordlatency.update_df(f"End of Frame {frame}", timestamp=end, frame=frame)
+            i-=1
+            recordlatency.update_df(f"Start of Frame", timestamp=start, frame=frame)
+            recordlatency.update_df(f"End of Frame", timestamp=end, frame=frame)
 
     finally:
         if world is not None:
@@ -183,7 +182,7 @@ def main():
         help='actor filter (default: "vehicle.*")')
     argparser.add_argument(
         '--save_folder',
-        default='latency_performance',
+        default='latency_performance/recording',
         help='Folder path to save latency results and recordings')
     argparser.add_argument(
         '--record',
