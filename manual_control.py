@@ -34,7 +34,7 @@ import argparse
 import logging
 from components.record import get_vehicle_position
 import json
-from record_latency import RecordLatency
+from components.record_latency import RecordLatency
 import time 
 import os 
 
@@ -44,7 +44,7 @@ import os
 
 
 def game_loop(args):
-    recordlatency = RecordLatency()
+    recordlatency = RecordLatency(os.path.join(args.save_folder, "latency.csv"))
     record = args.record
     pygame.init()
     pygame.font.init()
@@ -108,15 +108,11 @@ def game_loop(args):
             
             if record == True: 
                 start_position = time.time()
-                position, start_get_position, end_get_position = get_vehicle_position(frame, world.player)
-                position_data.append(position)
+                position, start_get_position, end_get_position = get_vehicle_position(frame, world.player, os.path.join(args.save_folder, "vehicle_positional_data.csv"))
                 end_position = time.time() 
 
-                recordlatency.update_df("Start Get Vehicle Position (on manual_control.py Side)", timestamp=start_position, frame=frame)
-                recordlatency.update_df("End Get Vehicle Position (on manual_control.py Side)", timestamp=end_position, frame=frame)
-
-                recordlatency.update_df("Start Get Vehicle Position (on record.py Side)", timestamp=start_get_position, frame=frame)
-                recordlatency.update_df("End Get Vehicle Position (on record.py Side)", timestamp=end_get_position, frame=frame)
+                recordlatency.log("Get Vehicle Position (on manual_control.py Side)", timestamp=end_position - start_position, frame=frame)
+                recordlatency.log("Get Vehicle Position (on record.py Side)", timestamp=end_get_position - start_get_position, frame=frame)
             
             world.tick(clock)
             world.render(display)
@@ -125,9 +121,7 @@ def game_loop(args):
 
             end = time.time()
 
-           
-            recordlatency.update_df(f"Start of Frame {frame}", timestamp=start, frame=frame)
-            recordlatency.update_df(f"End of Frame {frame}", timestamp=end, frame=frame)
+            recordlatency.log(f"Frame {frame}", timestamp=end - start, frame=frame)
 
     finally:
         if world is not None:
@@ -136,16 +130,10 @@ def game_loop(args):
 
     # Save position data as .json file
         if record == True:    
-            save_vehicle_position = os.path.join(args.save_folder, "vehicle_positional_data.json")
-            with open(save_vehicle_position, "w") as f: 
-                json.dump(position_data, f, indent=4)
-            print("Position data json file saved")
-
             controller.save_inputs_to_file(args.save_folder)
             print("Inputs saved")
 
-        recordlatency.save_path = os.path.join(args.save_folder, "latency.csv")
-        recordlatency.save_to_csv()
+        
         print('\nCancelled by user. Bye!')
 
 def main():
@@ -183,7 +171,7 @@ def main():
         help='actor filter (default: "vehicle.*")')
     argparser.add_argument(
         '--save_folder',
-        default='latency_performance',
+        default='recordings',
         help='Folder path to save latency results and recordings')
     argparser.add_argument(
         '--record',

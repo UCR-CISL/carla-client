@@ -65,8 +65,7 @@ class SteeringwheelController(object):
                 self.input_log.append({"type": "JOYBUTTONDOWN", "button": event.button, "time": timestamp, "frame": frame})
                 end_joydown = time.time() 
                 if self.record == True: 
-                    self.recordlatency.update_df(event="Start of JOYBUTTONDOWN", timestamp=start_joydown, frame=frame)
-                    self.recordlatency.update_df(event="End of JOYBUTTONDOWN", timestamp=end_joydown, frame=frame)
+                    self.recordlatency.log(event="JOYBUTTONDOWN", timestamp=end_joydown - start_joydown, frame=frame)
                 if event.button == js.BUTTON_A:
                     world.restart()
                 elif event.button == js.BUTTON_MENU:
@@ -87,8 +86,7 @@ class SteeringwheelController(object):
                 self.input_log.append({"type": "JOYHATMOTION", "value": event.value, "time": timestamp})
                 end_joyhatmotion = time.time()
                 if self.record == True: 
-                    self.recordlatency.update_df(event="Start of JOYHATMOTION", timestamp=start_joyhatmotion, frame=frame)
-                    self.recordlatency.update_df(event="End of JOYHATMOTION", timestamp=end_joyhatmotion, frame=frame)
+                    self.recordlatency.log(event="JOYHATMOTION", timestamp=end_joyhatmotion - start_joyhatmotion, frame=frame)
                 if event.value == js.HAT_LEFT:
                     world.camera_manager.toggle_side_view(1)
                 elif event.value == js.HAT_RIGHT:
@@ -103,8 +101,7 @@ class SteeringwheelController(object):
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": timestamp})
                 end_keyup = time.time()
                 if self.record == True: 
-                    self.recordlatency.update_df(event="Start of KEYUP", timestamp=start_keup, frame=frame)
-                    self.recordlatency.update_df(event="End of KEYUP", timestamp=end_keyup, frame=frame)
+                    self.recordlatency.log(event="KEYUP", timestamp=end_keyup - start_keup, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -237,8 +234,7 @@ class KeyboardController(object):
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": pygame.time.get_ticks()})
                 end_keyup = time.time()
                 if self.record == True: 
-                    self.recordlatency.update_df(event=f"Start of KEYUP: {pygame.key.name(event.key)}", timestamp=start_keyup, frame=frame)
-                    self.recordlatency.update_df(event=f"End of KEYUP: {pygame.key.name(event.key)}", timestamp=end_keyup, frame=frame)
+                    self.recordlatency.log(event=f"KEYUP: {pygame.key.name(event.key)}", timestamp=end_keyup - start_keyup, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -394,7 +390,7 @@ class KeyboardController(object):
     def _is_quit_shortcut(key):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
     
-    def save_inputs_to_file(self, save_folder="latency_performance"): 
+    def save_inputs_to_file(self, save_folder): 
         save_path = os.path.join(save_folder, "inputs_log_keyboard.json")
         with open(save_path , "w") as f: 
             json.dump(self.input_log, f, indent=4)

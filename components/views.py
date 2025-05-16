@@ -7,7 +7,7 @@ import imageio.v3 as iio
 import multiprocessing
 from multiprocessing import shared_memory
 import ctypes
-from components.record import save_image2
+from components.record import save_image
 import time 
 
 def decode_loop(bytes_q, shm_decoded, terminate):
@@ -30,7 +30,7 @@ def decode_loop(bytes_q, shm_decoded, terminate):
 
 
 class Decoder:
-    def __init__(self, sensor, width, height, recordlatency, save_folder, record):
+    def __init__(self, sensor, width, height, recordlatency, save_folder, record, cam_type):
         self.sensor = sensor
         self.surface = None
 
@@ -43,12 +43,13 @@ class Decoder:
         self.recordlatency = recordlatency
         self.record = record
         self.save_folder = save_folder
+        self.cam_type = cam_type
 
     def start(self):
         self.terminate.value = False
         # We need to pass the lambda a weak reference to self to avoid circular reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data, self.recordlatency, self.save_folder, self.record))
+        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data, self.recordlatency, self.save_folder, self.record, self.cam_type))
         self.process.start()
 
     def stop(self):
@@ -146,27 +147,35 @@ class CameraManager(object):
                                                               "reverse", save_folder)
             self.reverse_camera_decoder.start()
 
-            # for i in range(2):
-            #     side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[i][-1],
-            #                                               self._side_mirrors_transforms[i])
-            #     self.side_mirror_camera_decoders.append(side_mirror_decoder)
-            #     side_mirror_decoder.start()
+
+            side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[0][-1],
+                                                          self._side_mirrors_transforms[0], "left", save_folder)
+            self.side_mirror_camera_decoders.append(side_mirror_decoder)
+            side_mirror_decoder.start()
+
+
+            side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[1][-1],
+                                                          self._side_mirrors_transforms[1], "right", save_folder)
+            self.side_mirror_camera_decoders.append(side_mirror_decoder)
+            side_mirror_decoder.start()
 
         if notify:
             self.hud.notification(self.driver_view_info[index][2])
         self.index = index
 
-    #TODO: Check for unique camera names
     def _decoder_setup(self, bp, transform, cam_type, save_folder):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
-        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), self.recordlatency, save_folder, self.record)
-        # camera.listen(lambda image: save_image(image, cam_type))
+        self.save_folder = save_folder
+        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), self.recordlatency, save_folder, self.record, cam_type)
         return decoder
 
     def _switch_side_view(self):
         prev_decoder = self.driver_camera_decoder
+
+        cam_type = "left" if self.transform_index == 1 else "right" 
+
         self.driver_camera_decoder = self._decoder_setup(self.driver_view_info[0][-1],
-                                                         self._camera_transforms[self.transform_index])
+                                                         self._camera_transforms[self.transform_index], cam_type, self.save_folder)
         self.driver_camera_decoder.start()
         prev_decoder.destroy()
 
@@ -190,8 +199,7 @@ class CameraManager(object):
         #     display.blit(self.side_mirror_camera_decoders[1].surface,
         #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
-
-def _decode(weak_self, byte_data, recordlatency, save_folder, record):
+def _decode(weak_self, byte_data, recordlatency, save_folder, record, cam_type):
     self = weak_self()
     if not self or self.terminate.value:
         return
@@ -203,6 +211,5 @@ def _decode(weak_self, byte_data, recordlatency, save_folder, record):
     self.surface = pygame.surfarray.make_surface(data.swapaxes(0, 1))
 
     if record == True: 
-        start, end, file_name = save_image2(data, byte_data.frame, save_folder)
-        recordlatency.update_df(event=f"Start of Saving Image: {file_name}", timestamp=start, frame=byte_data.frame)
-        recordlatency.update_df(event=f"End of Saving Image: {file_name}", timestamp=end, frame=byte_data.frame)
+        start, end, file_name = save_image(data, byte_data.frame, save_folder, cam_type)
+        recordlatency.log(event=f"Saving Frame", timestamp=end - start, frame=byte_data.frame)
