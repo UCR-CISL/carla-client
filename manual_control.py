@@ -110,7 +110,7 @@ def game_loop(args):
                 start_position = time.time()
                 position, start_get_position, end_get_position = get_vehicle_position(frame, world.player, os.path.join(args.save_folder, "vehicle_positional_data.csv"))
                 end_position = time.time() 
-
+                
                 recordlatency.log("Get Vehicle Position (on manual_control.py Side)", timestamp=end_position - start_position, frame=frame)
                 recordlatency.log("Get Vehicle Position (on record.py Side)", timestamp=end_get_position - start_get_position, frame=frame)
             
