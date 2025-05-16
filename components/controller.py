@@ -103,8 +103,8 @@ class SteeringwheelController(object):
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": timestamp})
                 end_keyup = time.time()
                 if self.record == True: 
-                    self.recordlatency.update_df(event="Start of KEYUP", timestamp=start_joyhatmotion, frame=frame)
-                    self.recordlatency.update_df(event="End of KEYUP", timestamp=end_joyhatmotion, frame=frame)
+                    self.recordlatency.update_df(event="Start of KEYUP", timestamp=start_keup, frame=frame)
+                    self.recordlatency.update_df(event="End of KEYUP", timestamp=end_keyup, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -211,8 +211,8 @@ class SteeringwheelController(object):
     def _is_quit_shortcut(key):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
 
-    def save_inputs_to_file(self): 
-        with open("latency_performance/inputs_log_steeringwheel.json", "w") as f: 
+    def save_inputs_to_file(self, save_folder): 
+        with open(f"{save_folder}/inputs_log_steeringwheel.json", "w") as f: 
             json.dump(self.input_log, f, indent=4)
 
 class KeyboardController(object):
