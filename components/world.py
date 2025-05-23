@@ -5,21 +5,21 @@ from components.views import CameraManager
 
 
 class World(object):
-    def __init__(self, carla_world, hud, menu, actor_filter, recordlatency, save_folder, record):
+    def __init__(self, carla_world, hud, menu, recordlatency, args):
         self.world = carla_world
         self.hud = hud
         self.menu = menu
         self.player = None
         self.recordlatency = recordlatency
-        self.record = record
-        self.save_folder = save_folder
+        self.record = args.record
+        self.save_folder = args.save_folder
         # self.collision_sensor = None
         # self.lane_invasion_sensor = None
         # self.gnss_sensor = None
         self.camera_manager = None
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
-        self._actor_filter = actor_filter
+        self._actor_filter = args.actor_filter
         self.restart()
         self.world.on_tick(hud.on_world_tick)
 

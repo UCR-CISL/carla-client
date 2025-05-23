@@ -21,19 +21,16 @@ To find out the values of your steering wheel use jstest-gtk in Ubuntu.
 from __future__ import print_function
 
 import pygame
-import evdev
-from evdev import ecodes, InputDevice
 
 from components.display import HUD, SettingsMenu
 from components.controller import SteeringwheelController, KeyboardController
-from components.game import World
+from components.world import World
 
 import carla
 
 import argparse
 import logging
 from components.record import get_vehicle_position
-import json
 from components.record_latency import RecordLatency
 import time 
 import os 
@@ -45,11 +42,9 @@ import os
 
 def game_loop(args):
     recordlatency = RecordLatency(os.path.join(args.save_folder, "latency.csv"))
-    record = args.record
     pygame.init()
     pygame.font.init()
     world = None
-    position_data = []
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(5.0)
@@ -69,29 +64,53 @@ def game_loop(args):
         if joystick_count >= 1:
             joystick = pygame.joystick.Joystick(0)
             joystick.init()
-            controller = SteeringwheelController(joystick, recordlatency, record)
+            controller = SteeringwheelController(joystick, recordlatency, args.record)
             steering_config = (
                 controller.steering_mode, controller.steering_sensitivity_min, controller.steering_sensitivity_max)
             if joystick_count > 1:
                 raise ValueError("More than one joystick connected. Using joystick 0 as default.")
         else:
-            controller = KeyboardController(False, recordlatency, record)
+            controller = KeyboardController(False, recordlatency, args.record)
             steering_config = (0, 0.5, 0.5)  # Dummy config for keyboard controller
 
+        original_settings = None
+        
+        
+        sim_world = client.get_world()
         hud = HUD(args.width, args.height)
         settings_menu = SettingsMenu(display, steering_config)
-        world = World(client.get_world(), hud, settings_menu, args.filter, recordlatency, args.save_folder, record)
+        
         weather = carla.WeatherParameters(sun_altitude_angle=70.0)
-        world.world.set_weather(weather)
+        sim_world.set_weather(weather)
+
+        if args.sync:
+            original_settings = sim_world.get_settings()
+            settings = sim_world.get_settings()
+
+            if not settings.synchronous_mode:
+                settings.synchronous_mode = True
+                settings.fixed_delta_seconds = 0.05
+            sim_world.apply_settings(settings)
+
+        world = World(sim_world, hud, settings_menu, recordlatency, args)
 
         # TODO: force feedback adjust. Not working on G923.
-        # device = evdev.list_devices()[0]e
+        # device = evdev.list_devices()[0]
         # evtdev = InputDevice(device)
         # val = 20000  # val \in [0,65535]
         # evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
 
         clock = pygame.time.Clock()
+
+        if args.sync:
+            sim_world.tick()
+        else:
+            sim_world.wait_for_tick()
+
         while True:
+            if args.sync:
+                sim_world.tick()
+
             start = time.time()
             clock.tick_busy_loop(60)
             snapshot = client.get_world().get_snapshot()
@@ -106,7 +125,7 @@ def game_loop(args):
                 controller.save_config_file()
                 settings_menu.config_save = False
             
-            if record == True: 
+            if args.record == True: 
                 start_position = time.time()
                 position, start_get_position, end_get_position = get_vehicle_position(frame, world.player, os.path.join(args.save_folder, "vehicle_positional_data.csv"))
                 end_position = time.time() 
@@ -124,12 +143,17 @@ def game_loop(args):
             recordlatency.log(f"Frame {frame}", timestamp=end - start, frame=frame)
 
     finally:
+
+        if original_settings:
+            sim_world.apply_settings(original_settings)
+
         if world is not None:
             world.destroy()
+        
         pygame.quit()
 
     # Save position data as .json file
-        if record == True:    
+        if args.record == True:    
             controller.save_inputs_to_file(args.save_folder)
             print("Inputs saved")
 
@@ -177,6 +201,10 @@ def main():
         '--record',
         default=True,
         help='Enter True to perform sensor recording and False to run without sensor recording')
+    argparser.add_argument(
+        '--sync',
+        default=True,
+        help='Enable sync to utilize multi GPU Carla setup')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]

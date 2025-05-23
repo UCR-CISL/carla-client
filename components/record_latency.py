@@ -1,4 +1,4 @@
-import os 
+import concurrent.futures
 
 class RecordLatency(object): 
     def __init__(self, save_path):
@@ -7,12 +7,11 @@ class RecordLatency(object):
         self.events = []
         self.save_path = save_path
 
-    def _check_existing_directory(self): 
-        folder = os.path.dirname(self.save_path)
-        folder = os.path.expanduser(folder)
-        if folder and not os.path.exists(folder): 
-            os.makedirs(folder)
+        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
-    def log(self, event, timestamp, frame):
+    def _log(self, event, timestamp, frame):
         with open(self.save_path, "a") as file:
             file.write(f"{frame},{timestamp},{event}\n")
+
+    def log(self, event, timestamp, frame):
+        self.pool.submit(self._log, event, timestamp, frame)

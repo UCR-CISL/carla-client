@@ -8,7 +8,6 @@ import multiprocessing
 from multiprocessing import shared_memory
 import ctypes
 from components.record import save_image
-import time 
 import concurrent.futures
 
 def decode_loop(bytes_q, shm_decoded, terminate):
