@@ -60,10 +60,10 @@ class Decoder:
         self.sensor.stop()
 
     def destroy(self):
-        self.pool.shutdown(wait=True)
-
         if not self.terminate.value:
             self.stop()
+
+        self.pool.shutdown(wait=True)
         self.shm_decoded.close()
         self.shm_decoded.unlink()
         self.sensor.destroy()
@@ -174,7 +174,6 @@ class CameraManager(object):
 
     def _decoder_setup(self, bp, transform, cam_type, save_folder):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
-        # camera.listen(lambda image: image.save_to_disk(f"{image.frame}.png"))
         self.save_folder = save_folder
         decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), self.recordlatency, save_folder, self.record, cam_type)
         return decoder

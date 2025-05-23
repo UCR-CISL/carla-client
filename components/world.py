@@ -19,7 +19,7 @@ class World(object):
         self.camera_manager = None
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
-        self._actor_filter = args.actor_filter
+        self._actor_filter = args.filter
         self.restart()
         self.world.on_tick(hud.on_world_tick)
 

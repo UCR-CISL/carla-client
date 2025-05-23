@@ -203,7 +203,7 @@ def main():
         help='Enter True to perform sensor recording and False to run without sensor recording')
     argparser.add_argument(
         '--sync',
-        default=True,
+        default=False,
         help='Enable sync to utilize multi GPU Carla setup')
     args = argparser.parse_args()
 
