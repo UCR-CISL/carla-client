@@ -31,7 +31,7 @@ import carla
 import argparse
 import logging
 from components.record import get_vehicle_position
-from components.record_latency import RecordLatency
+from components.record_latency import Latency
 import time 
 import os 
 
@@ -41,7 +41,7 @@ import os
 
 
 def game_loop(args):
-    recordlatency = RecordLatency(os.path.join(args.save_folder, "latency.csv"))
+    latency = Latency(os.path.join(args.save_folder, "latency.csv"))
     pygame.init()
     pygame.font.init()
     world = None
@@ -53,10 +53,6 @@ def game_loop(args):
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE | pygame.SCALED)
 
-        # display = pygame.display.set_mode(
-        #     (args.width, args.height),
-        #     pygame.HWSURFACE | pygame.FULLSCREEN )
-
         # initialize steering wheel
         pygame.joystick.init()
         joystick_count = pygame.joystick.get_count()
@@ -64,13 +60,13 @@ def game_loop(args):
         if joystick_count >= 1:
             joystick = pygame.joystick.Joystick(0)
             joystick.init()
-            controller = SteeringwheelController(joystick, recordlatency, args.record)
+            controller = SteeringwheelController(joystick, latency, args.record)
             steering_config = (
                 controller.steering_mode, controller.steering_sensitivity_min, controller.steering_sensitivity_max)
             if joystick_count > 1:
                 raise ValueError("More than one joystick connected. Using joystick 0 as default.")
         else:
-            controller = KeyboardController(False, recordlatency, args.record)
+            controller = KeyboardController(False, latency, args.record)
             steering_config = (0, 0.5, 0.5)  # Dummy config for keyboard controller
 
         original_settings = None
@@ -92,7 +88,7 @@ def game_loop(args):
                 settings.fixed_delta_seconds = 0.05
             sim_world.apply_settings(settings)
 
-        world = World(sim_world, hud, settings_menu, recordlatency, args)
+        world = World(sim_world, hud, settings_menu, latency, args)
 
         # TODO: force feedback adjust. Not working on G923.
         # device = evdev.list_devices()[0]
@@ -130,8 +126,8 @@ def game_loop(args):
                 position, start_get_position, end_get_position = get_vehicle_position(frame, world.player, os.path.join(args.save_folder, "vehicle_positional_data.csv"))
                 end_position = time.time() 
                 
-                recordlatency.log("Get Vehicle Position (on manual_control.py Side)", timestamp=end_position - start_position, frame=frame)
-                recordlatency.log("Get Vehicle Position (on record.py Side)", timestamp=end_get_position - start_get_position, frame=frame)
+                latency.log("Get Vehicle Position (on manual_control.py Side)", timestamp=end_position - start_position, frame=frame)
+                latency.log("Get Vehicle Position (on record.py Side)", timestamp=end_get_position - start_get_position, frame=frame)
             
             world.tick(clock)
             world.render(display)
@@ -140,7 +136,7 @@ def game_loop(args):
 
             end = time.time()
 
-            recordlatency.log(f"Frame {frame}", timestamp=end - start, frame=frame)
+            latency.log(f"Frame {frame}", timestamp=end - start, frame=frame)
 
     finally:
 

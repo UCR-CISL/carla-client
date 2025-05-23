@@ -54,10 +54,10 @@ except ImportError:
     raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 
 class SteeringwheelController(object):
-    def __init__(self, joystick, recordlatency, record):
+    def __init__(self, joystick, latency, record):
         self._control = carla.VehicleControl()
         self._steer_cache = 0.0
-        self.recordlatency = recordlatency
+        self.latency = latency
         self.record = record
         # world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
@@ -105,7 +105,7 @@ class SteeringwheelController(object):
                 self.input_log.append({"type": "JOYBUTTONDOWN", "button": event.button, "time": timestamp, "frame": frame})
                 end_joydown = time.time() 
                 if self.record == True: 
-                    self.recordlatency.log(event="JOYBUTTONDOWN", timestamp=end_joydown - start_joydown, frame=frame)
+                    self.latency.log(event="JOYBUTTONDOWN", timestamp=end_joydown - start_joydown, frame=frame)
                 if event.button == js.BUTTON_A:
                     world.restart()
                 elif event.button == js.BUTTON_MENU:
@@ -126,7 +126,7 @@ class SteeringwheelController(object):
                 self.input_log.append({"type": "JOYHATMOTION", "value": event.value, "time": timestamp})
                 end_joyhatmotion = time.time()
                 if self.record == True: 
-                    self.recordlatency.log(event="JOYHATMOTION", timestamp=end_joyhatmotion - start_joyhatmotion, frame=frame)
+                    self.latency.log(event="JOYHATMOTION", timestamp=end_joyhatmotion - start_joyhatmotion, frame=frame)
                 if event.value == js.HAT_LEFT:
                     world.camera_manager.toggle_side_view(1)
                 elif event.value == js.HAT_RIGHT:
@@ -141,7 +141,7 @@ class SteeringwheelController(object):
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": timestamp})
                 end_keyup = time.time()
                 if self.record == True: 
-                    self.recordlatency.log(event="KEYUP", timestamp=end_keyup - start_keup, frame=frame)
+                    self.latency.log(event="KEYUP", timestamp=end_keyup - start_keup, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -255,12 +255,12 @@ class SteeringwheelController(object):
 class KeyboardController(object):
     """Class that handles keyboard input."""
 
-    def __init__(self, start_in_autopilot, recordlatency, record ):
+    def __init__(self, start_in_autopilot, latency, record ):
         self._control = carla.VehicleControl()
         self._lights = carla.VehicleLightState.NONE
         self._steer_cache = 0.0
         self.input_log = []
-        self.recordlatency = recordlatency
+        self.latency = latency
         self.record = record
 
     def parse_events(self, world, clock, frame):
@@ -274,7 +274,7 @@ class KeyboardController(object):
                 self.input_log.append({"type": "KEYUP", "key": pygame.key.name(event.key), "time": pygame.time.get_ticks()})
                 end_keyup = time.time()
                 if self.record == True: 
-                    self.recordlatency.log(event=f"KEYUP: {pygame.key.name(event.key)}", timestamp=end_keyup - start_keyup, frame=frame)
+                    self.latency.log(event=f"KEYUP: {pygame.key.name(event.key)}", timestamp=end_keyup - start_keyup, frame=frame)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:

@@ -1,6 +1,6 @@
 import concurrent.futures
 
-class RecordLatency(object): 
+class Latency(): 
     def __init__(self, save_path):
         self.frames = [] 
         self.timestamps = []

@@ -5,12 +5,12 @@ from components.views import CameraManager
 
 
 class World(object):
-    def __init__(self, carla_world, hud, menu, recordlatency, args):
+    def __init__(self, carla_world, hud, menu, latency, args):
         self.world = carla_world
         self.hud = hud
         self.menu = menu
         self.player = None
-        self.recordlatency = recordlatency
+        self.latency = latency
         self.record = args.record
         self.save_folder = args.save_folder
         # self.collision_sensor = None
@@ -50,7 +50,7 @@ class World(object):
         # self.collision_sensor = CollisionSensor(self.player, self.hud)
         # self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         # self.gnss_sensor = GnssSensor(self.player)
-        self.camera_manager = CameraManager(self.player, self.hud, self.recordlatency, self.record)
+        self.camera_manager = CameraManager(self.player, self.hud, self.latency, self.record)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, self.save_folder, notify=False)
         actor_type = get_actor_display_name(self.player)
