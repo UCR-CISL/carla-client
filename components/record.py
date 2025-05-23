@@ -1,5 +1,3 @@
-import carla 
-import numpy as np 
 import imageio.v3 as iio
 import os 
 import time 

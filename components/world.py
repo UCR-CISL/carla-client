@@ -20,6 +20,7 @@ class World(object):
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
         self._actor_filter = args.filter
+        self.sync = args.sync
         self.restart()
         self.world.on_tick(hud.on_world_tick)
 
@@ -54,6 +55,11 @@ class World(object):
         self.camera_manager.set_sensor(cam_index, self.save_folder, notify=False)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+
+        if self.sync:
+            self.world.tick()
+        else:
+            self.world.wait_for_tick()
 
     def next_weather(self, reverse=False):
         self._weather_index += -1 if reverse else 1
