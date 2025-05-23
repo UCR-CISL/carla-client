@@ -121,8 +121,8 @@ class CameraManager(object):
 
         for mirror_info in self.sensors_side_mirrors_info:
             bp = bp_library.find(mirror_info[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 16)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 16)))
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 1.5)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 1.5)))
             bp.set_attribute('fov', str(45.0))
             mirror_info.append(bp)
 
@@ -133,9 +133,13 @@ class CameraManager(object):
             if self.driver_camera_decoder is not None:
                 self.driver_camera_decoder.destroy()
                 self.reverse_camera_decoder.destroy()
+                self.left_side_mirror_decoder.destroy()
+                self.right_side_mirror_decoder.destroy()
 
                 self.driver_camera_decoder = None
                 self.reverse_camera_decoder = None
+                self.left_side_mirror_decoder = None
+                self.right_side_mirror_decoder = None
 
             self.driver_camera_decoder = self._decoder_setup(self.driver_view_info[0][-1],
                                                              self._camera_transforms[0], 
@@ -148,16 +152,17 @@ class CameraManager(object):
             self.reverse_camera_decoder.start()
 
 
-            side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[0][-1],
+            self.left_side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[0][-1],
                                                           self._side_mirrors_transforms[0], "left", save_folder)
-            self.side_mirror_camera_decoders.append(side_mirror_decoder)
-            side_mirror_decoder.start()
-
-
-            side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[1][-1],
+            
+            self.right_side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[1][-1],
                                                           self._side_mirrors_transforms[1], "right", save_folder)
-            self.side_mirror_camera_decoders.append(side_mirror_decoder)
-            side_mirror_decoder.start()
+            
+            self.side_mirror_camera_decoders.append(self.left_side_mirror_decoder)
+            self.side_mirror_camera_decoders.append(self.right_side_mirror_decoder)
+            
+            self.left_side_mirror_decoder.start()
+            self.right_side_mirror_decoder.start()
 
         if notify:
             self.hud.notification(self.driver_view_info[index][2])
@@ -165,6 +170,7 @@ class CameraManager(object):
 
     def _decoder_setup(self, bp, transform, cam_type, save_folder):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
+        # camera.listen(lambda image: image.save_to_disk(f"{image.frame}.png"))
         self.save_folder = save_folder
         decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), self.recordlatency, save_folder, self.record, cam_type)
         return decoder
