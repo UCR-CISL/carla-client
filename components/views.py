@@ -9,6 +9,7 @@ from multiprocessing import shared_memory
 import ctypes
 from components.record import save_image
 import time 
+import concurrent.futures
 
 def decode_loop(bytes_q, shm_decoded, terminate):
     while not terminate.value:
@@ -34,6 +35,8 @@ class Decoder:
         self.sensor = sensor
         self.surface = None
 
+        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
         self.terminate = multiprocessing.Value(ctypes.c_bool, False)
         self.bytes_q = multiprocessing.Queue()
         self.shm_decoded = shared_memory.SharedMemory(create=True, size=width * height * 3)
@@ -58,12 +61,14 @@ class Decoder:
         self.sensor.stop()
 
     def destroy(self):
+        self.pool.shutdown(wait=True)
+
         if not self.terminate.value:
             self.stop()
         self.shm_decoded.close()
         self.shm_decoded.unlink()
         self.sensor.destroy()
-
+        
 
 class CameraManager(object):
     def __init__(self, parent_actor, hud, recordlatency, record):
@@ -121,8 +126,8 @@ class CameraManager(object):
 
         for mirror_info in self.sensors_side_mirrors_info:
             bp = bp_library.find(mirror_info[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 1.5)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 1.5)))
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 16)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 16)))
             bp.set_attribute('fov', str(45.0))
             mirror_info.append(bp)
 
@@ -205,6 +210,10 @@ class CameraManager(object):
         #     display.blit(self.side_mirror_camera_decoders[1].surface,
         #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
+def _save_to_disk(data, frame, save_folder, cam_type, recordlatency):
+    start, end, file_name = save_image(data, frame, save_folder, cam_type)
+    recordlatency.log(event=f"Saving Frame", timestamp=end - start, frame=frame)
+
 def _decode(weak_self, byte_data, recordlatency, save_folder, record, cam_type):
     self = weak_self()
     if not self or self.terminate.value:
@@ -216,6 +225,5 @@ def _decode(weak_self, byte_data, recordlatency, save_folder, record, cam_type):
     data = np.ndarray(self.decoded_shape, dtype=np.uint8, buffer=self.shm_decoded.buf)
     self.surface = pygame.surfarray.make_surface(data.swapaxes(0, 1))
 
-    if record == True: 
-        start, end, file_name = save_image(data, byte_data.frame, save_folder, cam_type)
-        recordlatency.log(event=f"Saving Frame", timestamp=end - start, frame=byte_data.frame)
+    if record:
+        self.pool.submit(_save_to_disk, np.copy(data), byte_data.frame, save_folder, cam_type, recordlatency)
