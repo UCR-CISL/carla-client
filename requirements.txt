@@ -3,4 +3,3 @@ pygame-menu
 evdev
 av
 imageio
-pandas
