@@ -98,8 +98,6 @@ def game_loop(args):
 
         if args.sync:
             sim_world.tick()
-        else:
-            sim_world.wait_for_tick()
 
         while True:
             if args.sync:
