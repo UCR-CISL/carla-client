@@ -7,8 +7,7 @@ import imageio.v3 as iio
 import multiprocessing
 from multiprocessing import shared_memory
 import ctypes
-from components.record import save_image
-import concurrent.futures
+from components.recorder import recorder
 
 def decode_loop(bytes_q, shm_decoded, terminate):
     while not terminate.value:
@@ -30,11 +29,9 @@ def decode_loop(bytes_q, shm_decoded, terminate):
 
 
 class Decoder:
-    def __init__(self, sensor, width, height, latency, save_folder, record, cam_type):
+    def __init__(self, sensor, width, height, cam_type):
         self.sensor = sensor
         self.surface = None
-
-        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
         self.terminate = multiprocessing.Value(ctypes.c_bool, False)
         self.bytes_q = multiprocessing.Queue()
@@ -42,16 +39,13 @@ class Decoder:
         self.process = multiprocessing.Process(target=decode_loop,
                                                args=(self.bytes_q, self.shm_decoded, self.terminate))
         self.decoded_shape = (height, width, 3)
-        self.latency = latency
-        self.record = record
-        self.save_folder = save_folder
         self.cam_type = cam_type
 
     def start(self):
         self.terminate.value = False
         # We need to pass the lambda a weak reference to self to avoid circular reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data, self.latency, self.save_folder, self.record, self.cam_type))
+        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data, self.cam_type))
         self.process.start()
 
     def stop(self):
@@ -63,19 +57,16 @@ class Decoder:
         if not self.terminate.value:
             self.stop()
 
-        self.pool.shutdown(wait=True)
         self.shm_decoded.close()
         self.shm_decoded.unlink()
         self.sensor.destroy()
         
 
 class CameraManager(object):
-    def __init__(self, parent_actor, hud, latency, record):
+    def __init__(self, parent_actor, hud):
         self.driver_camera_decoder = None
         self.reverse_camera_decoder = None
         self.side_mirror_camera_decoders = []
-        self.latency = latency
-        self.record = record
         self._parent = parent_actor
         self.hud = hud
         self._camera_transforms = [
@@ -175,7 +166,7 @@ class CameraManager(object):
     def _decoder_setup(self, bp, transform, cam_type, save_folder):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
         self.save_folder = save_folder
-        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), self.latency, save_folder, self.record, cam_type)
+        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), cam_type)
         return decoder
 
     def _switch_side_view(self):
@@ -208,11 +199,7 @@ class CameraManager(object):
         #     display.blit(self.side_mirror_camera_decoders[1].surface,
         #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
-def _save_to_disk(data, frame, save_folder, cam_type, latency):
-    start, end, file_name = save_image(data, frame, save_folder, cam_type)
-    latency.log(event=f"Saving Frame", timestamp=end - start, frame=frame)
-
-def _decode(weak_self, byte_data, latency, save_folder, record, cam_type):
+def _decode(weak_self, byte_data, cam_type):
     self = weak_self()
     if not self or self.terminate.value:
         return
@@ -223,5 +210,4 @@ def _decode(weak_self, byte_data, latency, save_folder, record, cam_type):
     data = np.ndarray(self.decoded_shape, dtype=np.uint8, buffer=self.shm_decoded.buf)
     self.surface = pygame.surfarray.make_surface(data.swapaxes(0, 1))
 
-    if record:
-        self.pool.submit(_save_to_disk, np.copy(data), byte_data.frame, save_folder, cam_type, latency)
+    recorder.save_image(np.copy(data), cam_type, byte_data.frame)
