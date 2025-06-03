@@ -3,9 +3,6 @@ import pygame
 import math
 import joystick_lookup as js
 from configparser import ConfigParser
-import json
-import time 
-import os 
 from components.recorder import recorder
 
 
