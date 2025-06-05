@@ -148,10 +148,6 @@ class SteeringwheelController(object):
                         self._control.gear = world.player.get_control().gear
                         world.hud.notification('%s Transmission' %
                                                ('Manual' if self._control.manual_gear_shift else 'Automatic'))
-                    # elif self._control.manual_gear_shift and event.key == K_COMMA:
-                    #     self._control.gear = max(-1, self._control.gear - 1)
-                    # elif self._control.manual_gear_shift and event.key == K_PERIOD:
-                    #     self._control.gear = self._control.gear + 1
 
 
         self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())

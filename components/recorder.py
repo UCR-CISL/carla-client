@@ -6,13 +6,25 @@ import concurrent.futures
 class Recorder():
     def __init__(self, base_path: Path):
         self.base = base_path
-
         self.pool = concurrent.futures.ThreadPoolExecutor(max_workers = 8)
+        self.recording = False
 
     def __del__(self):
         self.pool.shutdown(wait = True) 
 
-    def save_image(self, image, type: str, frame: str):
+    def turn_recorder_on(self) -> None:
+        self.recording = True
+
+    def turn_recorder_off(self) -> None:
+        self.recording = False
+
+    def is_recording(self) -> bool:
+        return self.recording
+
+    def save_image(self, image, type: str, frame: str) -> None:
+        if self.recording == False:
+            return
+
         def _worker():
             directory = self.base / "images" / type 
             os.makedirs(directory, exist_ok = True)
@@ -22,7 +34,10 @@ class Recorder():
         
         self.pool.submit(_worker)
 
-    def save_position(self, vehicle, frame: str):
+    def save_position(self, vehicle, frame: str) -> None:
+        if self.recording == False:
+            return
+        
         def _worker():
             transform = vehicle.get_transform()
 
@@ -33,7 +48,10 @@ class Recorder():
 
         self.pool.submit(_worker)
 
-    def save_button(self, type, button, frame, timestamp):
+    def save_button(self, type, button, frame, timestamp) -> None:
+        if self.recording == False:
+            return
+        
         def _worker():
             file = self.base / "buttons.csv"
 
@@ -42,7 +60,10 @@ class Recorder():
         
         self.pool.submit(_worker)
 
-    def save_hat(self, type, value, frame, timestamp):
+    def save_hat(self, type, value, frame, timestamp) -> None:
+        if self.recording == False:
+            return
+        
         def _worker():
             file = self.base / "hat.csv"
 
@@ -51,7 +72,10 @@ class Recorder():
         
         self.pool.submit(_worker)
 
-    def save_key(self, type, key, frame, timestamp):
+    def save_key(self, type, key, frame, timestamp) -> None:
+        if self.recording == False:
+            return
+        
         def _worker():
             file = self.base / "keys.csv"
 
@@ -60,7 +84,10 @@ class Recorder():
         
         self.pool.submit(_worker)
 
-    def save_joystick(self, type, raw, calculated, frame, timestamp):
+    def save_joystick(self, type, raw, calculated, frame, timestamp) -> None:
+        if self.recording == False:
+            return
+        
         def _worker():
             file = self.base / "joysticks.csv"
 
