@@ -175,19 +175,7 @@ class SteeringwheelController(object):
         jsButtons = [float(self._joystick.get_button(i)) for i in
                      range(self._joystick.get_numbuttons())]
 
-        # Custom function to map range of inputs [1, -1] to outputs [0, 1] i.e 1 from inputs means nothing is pressed
-        # For the steering, it seems fine as it is
-        K1 = 1.0  # 0.55
-        # steerCmd = K1 * math.tan(1.1 * jsInputs[self._steer_idx])
-
-        if self._mph < 20:
-            sensitivity = self.steering_sensitivity_min
-        elif 20 <= self._mph < 65:
-            sensitivity = (self._mph - 20) / (65 - 20) * (self.steering_sensitivity_max - self.steering_sensitivity_min)
-        else:
-            sensitivity = self.steering_sensitivity_max
-
-        steerCmd = jsInputs[self._steer_idx] * sensitivity
+        steerCmd = jsInputs[self._steer_idx] * 0.5
 
         K2 = 1.6  # 1.6
         throttleCmd = K2 + (2.05 * math.log10(
