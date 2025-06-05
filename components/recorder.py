@@ -98,7 +98,7 @@ class Recorder():
         
         self.pool.submit(_worker)
 
-    def save_joystick(self, type, raw, calculated, frame, timestamp) -> None:
+    def save_joystick(self, throttle_raw, throttle_calculated, brake_raw, brake_calculated, steer_raw, steer_calculated, frame, timestamp) -> None:
         if self.recording == False:
             return
         
@@ -106,7 +106,7 @@ class Recorder():
             file = self.recording_path / "joysticks.csv"
 
             with open(file, "a") as f:
-                f.write(f'{timestamp},{frame},{type},{raw},{calculated}\n')
+                f.write(f'{timestamp},{frame},{throttle_raw},{throttle_calculated},{brake_raw},{brake_calculated},{steer_raw},{steer_calculated}\n')
         
         self.pool.submit(_worker)
 

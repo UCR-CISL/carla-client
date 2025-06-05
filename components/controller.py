@@ -200,11 +200,7 @@ class SteeringwheelController(object):
 
         timestamp = pygame.time.get_ticks()
 
-        recorder.save_joystick("THROTTLE", jsInputs[self._throttle_idx], throttleCmd, frame, timestamp)
-        recorder.save_joystick("BRAKE", jsInputs[self._brake_idx], brakeCmd, frame, timestamp)
-        recorder.save_joystick("STEER", jsInputs[self._steer_idx], steerCmd, frame, timestamp)
-
-        # toggle = jsButtons[self._reverse_idx]
+        recorder.save_joystick(jsInputs[self._throttle_idx], throttleCmd, jsInputs[self._brake_idx], brakeCmd, jsInputs[self._steer_idx], steerCmd, frame, timestamp)
 
         self._control.hand_brake = bool(jsButtons[self._handbrake_idx])
 
