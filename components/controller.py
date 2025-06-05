@@ -104,6 +104,8 @@ class SteeringwheelController(object):
                     world.hud.toggle_info()
                 elif event.button == js.BUTTON_Y:
                     world.next_weather()
+                elif event.button == js.BUTTON_X:
+                    recorder.turn_recorder_off() if recorder.is_recording() else recorder.turn_recorder_on()
                 elif event.button == self._reverse_idx:
                     self._control.gear = 1 if self._control.reverse else -1
                 elif event.button == js.BUTTON_GEAR_DOWN:
