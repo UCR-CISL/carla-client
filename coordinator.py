@@ -18,8 +18,6 @@ To find out the values of your steering wheel use jstest-gtk in Ubuntu.
 
 """
 
-from __future__ import print_function
-
 import pygame
 
 from components.display import HUD, SettingsMenu
@@ -32,11 +30,14 @@ import carla
 import argparse
 import logging
 from components.recorder import recorder
-import socket
 
-client_id = socket.gethostname()
+import zmq
 
-zmq_client = Client("tcp://localhost:5555")
+NUM_EXPECTED_CLIENTS = 2
+
+context = zmq.Context()
+socket = context.socket(zmq.ROUTER)
+socket.bind("tcp://*:5555")
 
 
 # ==============================================================================
@@ -74,6 +75,8 @@ def game_loop(args):
 
         original_settings = None
         
+        clock = pygame.time.Clock()
+        
         sim_world = client.get_world()
         hud = HUD(args.width, args.height)
         settings_menu = SettingsMenu(display, steering_config)
@@ -92,37 +95,29 @@ def game_loop(args):
 
         world = World(sim_world, hud, settings_menu, args)
 
-        clock = pygame.time.Clock()
-
         if args.sync:
             sim_world.tick()
 
         while True:
-            zmq_client.send('READY')
-            msg = zmq_client.recv()
+            if args.sync:
+                sim_world.tick()
 
-            if msg != "OK":
-                continue 
+            ready_clients = {}
+            ids = []
+            while len(ready_clients) < NUM_EXPECTED_CLIENTS:
+                ident, _, msg = socket.recv_multipart()
 
-            clock.tick_busy_loop(60)
-            snapshot = client.get_world().get_snapshot()
-            frame = snapshot.frame
+                print("COORDINATOR MSG", msg.decode("utf-8"))
+                if msg == b"READY":
+                    ready_clients[ident] = True
+                    ids.append(ident)
+
+                print("READY CLIENTS", ready_clients)
             
-            if controller.parse_events(world, clock, frame):
-                break
-            if settings_menu.config_changed:
-                controller.update_steering_config(settings_menu.get_steering_config())
-                settings_menu.config_changed = False
-            if settings_menu.config_save:
-                controller.save_config_file()
-                settings_menu.config_save = False
-            
-            recorder.save_position(world.player, frame)
+            for id in ids:
+                socket.send_multipart([id, b"", b"OK"])
 
             world.tick(clock)
-                
-            world.render(display)
-            pygame.display.flip()
 
     finally:
 
@@ -133,7 +128,6 @@ def game_loop(args):
             world.destroy()
         
         pygame.quit()
-        
         print('\nCancelled by user. Bye!')
 
 def main():

@@ -118,8 +118,8 @@ def game_loop(args):
                 
             
             world.tick(clock)
-            world.render(display)
             
+            world.render(display)
             pygame.display.flip()
 
     finally:
@@ -131,8 +131,6 @@ def game_loop(args):
             world.destroy()
         
         pygame.quit()
-
-        recorder.__del__()
         
         print('\nCancelled by user. Bye!')
 
