@@ -94,9 +94,6 @@ def game_loop(args):
 
         clock = pygame.time.Clock()
 
-        if args.sync:
-            sim_world.tick()
-
         while True:
             zmq_client.send('READY')
             msg = zmq_client.recv()
