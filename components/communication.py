@@ -3,7 +3,7 @@ import zmq
 class Server():
     def __init__(self, port="tcp://192.168.88.97:5555"):
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REP)
+        self.socket = self.context.socket(zmq.ROUTER)
         self.socket.bind(port) 
 
     def recv_send_message(self, outgoing, timeout=500):
