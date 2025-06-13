@@ -131,6 +131,8 @@ def game_loop(args):
             world.destroy()
         
         pygame.quit()
+
+        recorder.__del__()
         
         print('\nCancelled by user. Bye!')
 

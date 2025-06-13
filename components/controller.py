@@ -104,6 +104,8 @@ class SteeringwheelController(object):
                     world.hud.toggle_info()
                 elif event.button == js.BUTTON_Y:
                     world.next_weather()
+                elif event.button == js.BUTTON_X:
+                    recorder.turn_recorder_off() if recorder.is_recording() else recorder.turn_recorder_on()
                 elif event.button == self._reverse_idx:
                     self._control.gear = 1 if self._control.reverse else -1
                 elif event.button == js.BUTTON_GEAR_DOWN:
@@ -198,11 +200,7 @@ class SteeringwheelController(object):
 
         timestamp = pygame.time.get_ticks()
 
-        recorder.save_joystick("THROTTLE", jsInputs[self._throttle_idx], throttleCmd, frame, timestamp)
-        recorder.save_joystick("BRAKE", jsInputs[self._brake_idx], brakeCmd, frame, timestamp)
-        recorder.save_joystick("STEER", jsInputs[self._steer_idx], steerCmd, frame, timestamp)
-
-        # toggle = jsButtons[self._reverse_idx]
+        recorder.save_joystick(jsInputs[self._throttle_idx], throttleCmd, jsInputs[self._brake_idx], brakeCmd, jsInputs[self._steer_idx], steerCmd, frame, timestamp)
 
         self._control.hand_brake = bool(jsButtons[self._handbrake_idx])
 

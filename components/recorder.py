@@ -3,16 +3,30 @@ import os
 from pathlib import Path
 import concurrent.futures
 
+from datetime import datetime
+
+
+
 class Recorder():
     def __init__(self, base_path: Path):
-        self.base = base_path
         self.pool = concurrent.futures.ThreadPoolExecutor(max_workers = 8)
         self.recording = False
+
+        self.take = 0
+        now = datetime.now()
+        self._base = base_path / now.strftime("%Y-%m-%d")
+        self.recording_path = self._base / str(self.take)
 
     def __del__(self):
         self.pool.shutdown(wait = True) 
 
     def turn_recorder_on(self) -> None:
+        if self.recording:
+            return 
+        
+        self.recording_path = self._base / str(self.take)
+        self.take += 1
+
         self.recording = True
 
     def turn_recorder_off(self) -> None:
@@ -26,7 +40,7 @@ class Recorder():
             return
 
         def _worker():
-            directory = self.base / "images" / type 
+            directory = self.recording_path / "images" / type 
             os.makedirs(directory, exist_ok = True)
 
             path = directory / f"{frame}.png"
@@ -41,7 +55,7 @@ class Recorder():
         def _worker():
             transform = vehicle.get_transform()
 
-            file = self.base / "position.csv"
+            file = self.recording_path / "position.csv"
 
             with open(file, "a") as f:
                 f.write(f'{frame},{vehicle.id},{transform.location.x},{transform.location.y},{transform.location.z},{transform.rotation.yaw},{transform.rotation.pitch},{transform.rotation.roll}\n')
@@ -53,7 +67,7 @@ class Recorder():
             return
         
         def _worker():
-            file = self.base / "buttons.csv"
+            file = self.recording_path / "buttons.csv"
 
             with open(file, "a") as f:
                 f.write(f'{timestamp},{frame},{type},{button}\n')
@@ -65,7 +79,7 @@ class Recorder():
             return
         
         def _worker():
-            file = self.base / "hat.csv"
+            file = self.recording_path / "hat.csv"
 
             with open(file, "a") as f:
                 f.write(f'{timestamp},{frame},{type},{value}\n')
@@ -77,23 +91,23 @@ class Recorder():
             return
         
         def _worker():
-            file = self.base / "keys.csv"
+            file = self.recording_path / "keys.csv"
 
             with open(file, "a") as f:
                 f.write(f'{timestamp},{frame},{type},{key}\n')\
         
         self.pool.submit(_worker)
 
-    def save_joystick(self, type, raw, calculated, frame, timestamp) -> None:
+    def save_joystick(self, throttle_raw, throttle_calculated, brake_raw, brake_calculated, steer_raw, steer_calculated, frame, timestamp) -> None:
         if self.recording == False:
             return
         
         def _worker():
-            file = self.base / "joysticks.csv"
+            file = self.recording_path / "joysticks.csv"
 
             with open(file, "a") as f:
-                f.write(f'{timestamp},{frame},{type},{raw},{calculated}\n')
+                f.write(f'{timestamp},{frame},{throttle_raw},{throttle_calculated},{brake_raw},{brake_calculated},{steer_raw},{steer_calculated}\n')
         
         self.pool.submit(_worker)
 
-recorder = Recorder(Path("recordings/0"))
+recorder = Recorder(Path("recordings"))
