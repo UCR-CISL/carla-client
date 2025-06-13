@@ -25,12 +25,19 @@ import pygame
 from components.display import HUD, SettingsMenu
 from components.controller import SteeringwheelController, KeyboardController
 from components.world import World
+from components.communication import Client
 
 import carla
 
 import argparse
 import logging
 from components.recorder import recorder
+import socket
+
+client_id = socket.gethostname()
+
+zmq_client = Client("tcp://localhost:5555")
+
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -86,20 +93,17 @@ def game_loop(args):
 
         world = World(sim_world, hud, settings_menu, args)
 
-        # TODO: force feedback adjust. Not working on G923.
-        # device = evdev.list_devices()[0]
-        # evtdev = InputDevice(device)
-        # val = 20000  # val \in [0,65535]
-        # evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
-
         clock = pygame.time.Clock()
 
         if args.sync:
             sim_world.tick()
 
         while True:
-            if args.sync:
-                sim_world.tick()
+            zmq_client.send(b'READY')
+            msg = zmq_client.recv()
+
+            if msg != "OK":
+                continue 
 
             clock.tick_busy_loop(60)
             snapshot = client.get_world().get_snapshot()
@@ -116,10 +120,7 @@ def game_loop(args):
             
             recorder.save_position(world.player, frame)
                 
-            
-            world.tick(clock)
             world.render(display)
-            
             pygame.display.flip()
 
     finally:

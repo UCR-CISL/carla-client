@@ -1,3 +1,12 @@
+import zmq
+import carla
+
+NUM_EXPECTED_CLIENTS = 3
+
+context = zmq.Context()
+socket = context.socket(zmq.ROUTER)
+socket.bind("tcp://*:5555")
+
 #!/usr/bin/env python
 
 # Copyright (c) 2019 Intel Labs
@@ -25,12 +34,19 @@ import pygame
 from components.display import HUD, SettingsMenu
 from components.controller import SteeringwheelController, KeyboardController
 from components.world import World
+from components.communication import Client
 
 import carla
 
 import argparse
 import logging
 from components.recorder import recorder
+import socket
+
+client_id = socket.gethostname()
+
+zmq_client = Client("tcp://localhost:5555")
+
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -86,41 +102,23 @@ def game_loop(args):
 
         world = World(sim_world, hud, settings_menu, args)
 
-        # TODO: force feedback adjust. Not working on G923.
-        # device = evdev.list_devices()[0]
-        # evtdev = InputDevice(device)
-        # val = 20000  # val \in [0,65535]
-        # evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
-
-        clock = pygame.time.Clock()
-
         if args.sync:
             sim_world.tick()
 
         while True:
-            if args.sync:
-                sim_world.tick()
+            ready_clients = {}
+            ids = []
+            while len(ready_clients) < NUM_EXPECTED_CLIENTS:
+                ident, _, msg = socket.recv_multipart()
+                if msg == b"READY":
+                    ready_clients[ident] = True
+                    ids.append(ident)
+            
+            for id in ids:
+                socket.send_multipart([id, b"", b"OK"])
 
-            clock.tick_busy_loop(60)
-            snapshot = client.get_world().get_snapshot()
-            frame = snapshot.frame
-            
-            if controller.parse_events(world, clock, frame):
-                break
-            if settings_menu.config_changed:
-                controller.update_steering_config(settings_menu.get_steering_config())
-                settings_menu.config_changed = False
-            if settings_menu.config_save:
-                controller.save_config_file()
-                settings_menu.config_save = False
-            
-            recorder.save_position(world.player, frame)
-                
-            
-            world.tick(clock)
-            world.render(display)
-            
-            pygame.display.flip()
+            world.tick()
+            print(f"Ticked world @ frame {world.get_snapshot().frame}")
 
     finally:
 
@@ -131,7 +129,6 @@ def game_loop(args):
             world.destroy()
         
         pygame.quit()
-        
         print('\nCancelled by user. Bye!')
 
 def main():
