@@ -5,7 +5,7 @@ NUM_EXPECTED_CLIENTS = 3
 
 context = zmq.Context()
 socket = context.socket(zmq.ROUTER)
-socket.bind("tcp://*:5555")
+socket.bind("tcp://192.168.88.97:5555")
 
 #!/usr/bin/env python
 
@@ -42,10 +42,6 @@ import argparse
 import logging
 from components.recorder import recorder
 import socket
-
-client_id = socket.gethostname()
-
-zmq_client = Client("tcp://localhost:5555")
 
 
 # ==============================================================================
