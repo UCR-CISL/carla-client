@@ -36,7 +36,7 @@ import socket
 
 client_id = socket.gethostname()
 
-zmq_client = Client("tcp://localhost:5555")
+zmq_client = Client("tcp://192.168.88.97:5555")
 
 
 # ==============================================================================

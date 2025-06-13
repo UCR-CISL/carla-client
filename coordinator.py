@@ -37,7 +37,7 @@ NUM_EXPECTED_CLIENTS = 2
 
 context = zmq.Context()
 socket = context.socket(zmq.ROUTER)
-socket.bind("tcp://*:5555")
+socket.bind("tcp://192.168.88.97:5555")
 
 
 # ==============================================================================
@@ -156,7 +156,7 @@ def main():
     argparser.add_argument(
         '--res',
         metavar='WIDTHxHEIGHT',
-        default='1920x1080',
+        default='400x300',
         help='window resolution (default: 1920x1080)')
     argparser.add_argument(
         '--filter',

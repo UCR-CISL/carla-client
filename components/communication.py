@@ -1,7 +1,7 @@
 import zmq
     
 class Server():
-    def __init__(self, port="tcp://localhost:5555"):
+    def __init__(self, port="tcp://192.168.88.97:5555"):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
         self.socket.bind(port) 
@@ -25,7 +25,7 @@ class Server():
             return None
 
 class Client():
-    def __init__(self, port="tcp://localhost:5555"): 
+    def __init__(self, port="tcp://192.168.88.97:5555"): 
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
