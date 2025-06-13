@@ -32,11 +32,8 @@ class Client():
         self.socket.connect(port)
 
     def send(self, outgoing):
-        print("SENDING READY")
         self.socket.send(outgoing.encode("utf-8"))
 
     def recv(self):
-        print("RECEIVING READY")
         incoming = self.socket.recv()
-        print("message", incoming)
         return incoming.decode('utf-8')

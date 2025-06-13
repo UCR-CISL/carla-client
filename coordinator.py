@@ -107,12 +107,9 @@ def game_loop(args):
             while len(ready_clients) < NUM_EXPECTED_CLIENTS:
                 ident, _, msg = socket.recv_multipart()
 
-                print("COORDINATOR MSG", msg.decode("utf-8"))
                 if msg == b"READY":
                     ready_clients[ident] = True
                     ids.append(ident)
-
-                print("READY CLIENTS", ready_clients)
             
             for id in ids:
                 socket.send_multipart([id, b"", b"OK"])
