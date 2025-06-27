@@ -95,15 +95,16 @@ def game_loop(args):
         clock = pygame.time.Clock()
 
         while True:
-            zmq_client.send('READY')
+            snapshot = client.get_world().get_snapshot()
+            frame = snapshot.frame
+
+            zmq_client.send(f'READY,{frame}')
             msg = zmq_client.recv()
 
             if msg != "OK":
                 continue 
 
             clock.tick_busy_loop(60)
-            snapshot = client.get_world().get_snapshot()
-            frame = snapshot.frame
             
             if controller.parse_events(world, clock, frame):
                 break

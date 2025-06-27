@@ -99,6 +99,10 @@ def game_loop(args):
             sim_world.tick()
 
         while True:
+
+            snapshot = client.get_world().get_snapshot()
+            frame = snapshot.frame
+
             if args.sync:
                 sim_world.tick()
 
@@ -107,7 +111,10 @@ def game_loop(args):
             while len(ready_clients) < NUM_EXPECTED_CLIENTS:
                 ident, _, msg = socket.recv_multipart()
 
-                if msg == b"READY":
+                msg = msg.decode('utf-8')
+                is_ready, frame_id = msg.split(",")
+
+                if is_ready == "READY" and frame_id == frame:
                     ready_clients[ident] = True
                     ids.append(ident)
             
