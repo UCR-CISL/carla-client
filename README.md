@@ -1,7 +1,24 @@
 # AutoDriveLab-Simulator
 
-1. `manual_control_steeringwheel.py`: main client script
-2. `pygame_input_test.py`: get steering wheel information
-3. `joystick_lookup.py`: a mapping of joystick buttons to their corresponding values. 
-   1. Currently tested layout: XBOX
-4. `wheel_config.ini`: pre-configured information of steering wheel
+## Carla Server 
+
+To run the Carla server, first pull the Docker image
+```commandline 
+docker pull kevinliuzc/carla-video-stream
+```
+
+Then run the carla server
+```commandline 
+docker run --privileged --gpus all --net=host -e DISPLAY=$DISPLAY kevinliuzc/carla-video-stream /bin/bash ./CarlaUE4.sh --graphicsadapter=1 -RenderOffScreen
+```
+## Running Client and Recording Sensor Data 
+
+To run the Carla client, first build the Docker  
+```commandline 
+docker build -f Dockerfile.dockerfile -t cisl/client-latency-recording .
+```
+
+Then run a Carla client container
+```commandline 
+docker run --privileged --gpus all --net=host -e DISPLAY=$DISPLAY -v ./:/app cisl/client-latency-recording
+```

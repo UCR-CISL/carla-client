@@ -5,18 +5,20 @@ from components.views import CameraManager
 
 
 class World(object):
-    def __init__(self, carla_world, hud, menu, actor_filter):
+    def __init__(self, carla_world, hud, menu, args):
         self.world = carla_world
         self.hud = hud
         self.menu = menu
         self.player = None
+        self.save_folder = args.save_folder
         # self.collision_sensor = None
         # self.lane_invasion_sensor = None
         # self.gnss_sensor = None
         self.camera_manager = None
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
-        self._actor_filter = actor_filter
+        self._actor_filter = args.filter
+        self.sync = args.sync
         self.restart()
         self.world.on_tick(hud.on_world_tick)
 
@@ -48,9 +50,14 @@ class World(object):
         # self.gnss_sensor = GnssSensor(self.player)
         self.camera_manager = CameraManager(self.player, self.hud)
         self.camera_manager.transform_index = cam_pos_index
-        self.camera_manager.set_sensor(cam_index, notify=False)
+        self.camera_manager.set_sensor(cam_index, self.save_folder, notify=False)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+
+        if self.sync:
+            self.world.tick()
+        else:
+            self.world.wait_for_tick()
 
     def next_weather(self, reverse=False):
         self._weather_index += -1 if reverse else 1
@@ -70,8 +77,8 @@ class World(object):
     def destroy(self):
         sensors = [
             self.camera_manager.driver_camera_decoder,
-            # self.camera_manager.side_mirror_camera_decoders[0],
-            # self.camera_manager.side_mirror_camera_decoders[1],
+            self.camera_manager.side_mirror_camera_decoders[0],
+            self.camera_manager.side_mirror_camera_decoders[1],
             self.camera_manager.reverse_camera_decoder,
             # self.collision_sensor.sensor,
             # self.lane_invasion_sensor.sensor,

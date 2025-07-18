@@ -3,17 +3,59 @@ import pygame
 import math
 import joystick_lookup as js
 from configparser import ConfigParser
+from components.recorder import recorder
+
 
 try:
-    from pygame.locals import *
+    import pygame
+    from pygame.locals import KMOD_CTRL
+    from pygame.locals import KMOD_SHIFT
+    from pygame.locals import K_0
+    from pygame.locals import K_9
+    from pygame.locals import K_BACKQUOTE
+    from pygame.locals import K_BACKSPACE
+    from pygame.locals import K_COMMA
+    from pygame.locals import K_DOWN
+    from pygame.locals import K_ESCAPE
+    from pygame.locals import K_F1
+    from pygame.locals import K_LEFT
+    from pygame.locals import K_PERIOD
+    from pygame.locals import K_RIGHT
+    from pygame.locals import K_SLASH
+    from pygame.locals import K_SPACE
+    from pygame.locals import K_TAB
+    from pygame.locals import K_UP
+    from pygame.locals import K_a
+    from pygame.locals import K_b
+    from pygame.locals import K_c
+    from pygame.locals import K_d
+    from pygame.locals import K_f
+    from pygame.locals import K_g
+    from pygame.locals import K_h
+    from pygame.locals import K_i
+    from pygame.locals import K_l
+    from pygame.locals import K_m
+    from pygame.locals import K_n
+    from pygame.locals import K_o
+    from pygame.locals import K_p
+    from pygame.locals import K_q
+    from pygame.locals import K_r
+    from pygame.locals import K_s
+    from pygame.locals import K_t
+    from pygame.locals import K_v
+    from pygame.locals import K_w
+    from pygame.locals import K_x
+    from pygame.locals import K_z
+    from pygame.locals import K_MINUS
+    from pygame.locals import K_EQUALS
 except ImportError:
     raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 
-
 class SteeringwheelController(object):
-    def __init__(self, joystick):
+    def __init__(self, joystick, args):
         self._control = carla.VehicleControl()
         self._steer_cache = 0.0
+        self.args = args
         # world.hud.notification("Press 'H' or '?' for help.", seconds=4.0)
 
         self._joystick = joystick
@@ -36,7 +78,7 @@ class SteeringwheelController(object):
 
         self._lights = carla.VehicleLightState.NONE
 
-    def parse_events(self, world, clock):
+    def parse_events(self, world, clock, frame):
         events = pygame.event.get()
         world.menu.update_events(events)
 
@@ -46,6 +88,7 @@ class SteeringwheelController(object):
         if world.menu.is_enabled():
             return
         for event in events:
+            timestamp = pygame.time.get_ticks()
             if event.type == pygame.QUIT:
                 return True
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -54,12 +97,15 @@ class SteeringwheelController(object):
                 if world.menu.settings_button.clickable and x <= mouse[0] <= x + w and y <= mouse[1] <= y + h:
                     world.menu.toggle_menu(False)
             elif event.type == pygame.JOYBUTTONDOWN:
+                recorder.save_button("JOYBUTTONDOWN", event.button, frame, timestamp)
                 if event.button == js.BUTTON_A:
                     world.restart()
                 elif event.button == js.BUTTON_MENU:
                     world.hud.toggle_info()
                 elif event.button == js.BUTTON_Y:
                     world.next_weather()
+                elif event.button == js.BUTTON_X:
+                    recorder.turn_recorder_off() if recorder.is_recording() else recorder.turn_recorder_on()
                 elif event.button == self._reverse_idx:
                     self._control.gear = 1 if self._control.reverse else -1
                 elif event.button == js.BUTTON_GEAR_DOWN:
@@ -70,6 +116,7 @@ class SteeringwheelController(object):
                     world.player.set_light_state(carla.VehicleLightState(self._lights))
 
             elif event.type == pygame.JOYHATMOTION:
+                recorder.save_hat("JOYHATMOTION", event.value, frame, timestamp)
                 if event.value == js.HAT_LEFT:
                     world.camera_manager.toggle_side_view(1)
                 elif event.value == js.HAT_RIGHT:
@@ -80,6 +127,7 @@ class SteeringwheelController(object):
                     world.camera_manager.toggle_side_view(0)
 
             elif event.type == pygame.KEYUP:
+                recorder.save_key("KEYUP", pygame.key.name(event.key), frame, timestamp)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -102,13 +150,10 @@ class SteeringwheelController(object):
                         self._control.gear = world.player.get_control().gear
                         world.hud.notification('%s Transmission' %
                                                ('Manual' if self._control.manual_gear_shift else 'Automatic'))
-                    # elif self._control.manual_gear_shift and event.key == K_COMMA:
-                    #     self._control.gear = max(-1, self._control.gear - 1)
-                    # elif self._control.manual_gear_shift and event.key == K_PERIOD:
-                    #     self._control.gear = self._control.gear + 1
+
 
         self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
-        self._parse_vehicle_wheel()
+        self._parse_vehicle_wheel(frame)
         self._control.reverse = self._control.gear < 0
         world.player.apply_control(self._control)
 
@@ -126,26 +171,13 @@ class SteeringwheelController(object):
         self._control.brake = 1.0 if keys[K_DOWN] or keys[K_s] else 0.0
         self._control.hand_brake = keys[K_SPACE]
 
-    def _parse_vehicle_wheel(self):
+    def _parse_vehicle_wheel(self, frame):
         numAxes = self._joystick.get_numaxes()
         jsInputs = [float(self._joystick.get_axis(i)) for i in range(numAxes)]
-        # print (jsInputs)
         jsButtons = [float(self._joystick.get_button(i)) for i in
                      range(self._joystick.get_numbuttons())]
 
-        # Custom function to map range of inputs [1, -1] to outputs [0, 1] i.e 1 from inputs means nothing is pressed
-        # For the steering, it seems fine as it is
-        K1 = 1.0  # 0.55
-        # steerCmd = K1 * math.tan(1.1 * jsInputs[self._steer_idx])
-
-        if self._mph < 20:
-            sensitivity = self.steering_sensitivity_min
-        elif 20 <= self._mph < 65:
-            sensitivity = (self._mph - 20) / (65 - 20) * (self.steering_sensitivity_max - self.steering_sensitivity_min)
-        else:
-            sensitivity = self.steering_sensitivity_max
-
-        steerCmd = jsInputs[self._steer_idx] * sensitivity
+        steerCmd = jsInputs[self._steer_idx] * 0.5
 
         K2 = 1.6  # 1.6
         throttleCmd = K2 + (2.05 * math.log10(
@@ -166,7 +198,9 @@ class SteeringwheelController(object):
         self._control.brake = brakeCmd
         self._control.throttle = throttleCmd
 
-        # toggle = jsButtons[self._reverse_idx]
+        timestamp = pygame.time.get_ticks()
+
+        recorder.save_joystick(jsInputs[self._throttle_idx], throttleCmd, jsInputs[self._brake_idx], brakeCmd, jsInputs[self._steer_idx], steerCmd, frame, timestamp)
 
         self._control.hand_brake = bool(jsButtons[self._handbrake_idx])
 
@@ -185,23 +219,25 @@ class SteeringwheelController(object):
     @staticmethod
     def _is_quit_shortcut(key):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
-
+    
 
 class KeyboardController(object):
     """Class that handles keyboard input."""
 
-    def __init__(self, start_in_autopilot):
+    def __init__(self, start_in_autopilot ):
         self._control = carla.VehicleControl()
         self._lights = carla.VehicleLightState.NONE
         self._steer_cache = 0.0
 
-    def parse_events(self, world, clock):
+    def parse_events(self, world, clock, frame):
         if isinstance(self._control, carla.VehicleControl):
             current_lights = self._lights
         for event in pygame.event.get():
+            timestamp = pygame.time.get_ticks()
             if event.type == pygame.QUIT:
                 return True
             elif event.type == pygame.KEYUP:
+                recorder.save_key("KEYUP", pygame.key.name(event.key), frame, timestamp)
                 if self._is_quit_shortcut(event.key):
                     return True
                 elif event.key == K_BACKSPACE:
@@ -292,7 +328,7 @@ class KeyboardController(object):
                     else:
                         world.hud.notification("Low beam lights")
                         current_lights |= carla.VehicleLightState.LowBeam
-                    if self._lights & carla.VehicleLightState.LowBeam:
+                    if self._inputs_log_keyboard.jsonlights & carla.VehicleLightState.LowBeam:
                         world.hud.notification("Fog lights")
                         current_lights |= carla.VehicleLightState.Fog
                     if self._lights & carla.VehicleLightState.Fog:

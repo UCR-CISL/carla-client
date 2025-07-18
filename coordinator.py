@@ -18,19 +18,27 @@ To find out the values of your steering wheel use jstest-gtk in Ubuntu.
 
 """
 
-from __future__ import print_function
-
 import pygame
 
 from components.display import HUD, SettingsMenu
 from components.controller import SteeringwheelController, KeyboardController
 from components.world import World
+from components.communication import Client
 
 import carla
 
 import argparse
 import logging
 from components.recorder import recorder
+
+import zmq
+
+NUM_EXPECTED_CLIENTS = 2
+
+context = zmq.Context()
+socket = context.socket(zmq.ROUTER)
+socket.bind("tcp://192.168.88.97:5555")
+
 
 # ==============================================================================
 # -- game_loop() ---------------------------------------------------------------
@@ -67,6 +75,7 @@ def game_loop(args):
 
         original_settings = None
         
+        clock = pygame.time.Clock()
         
         sim_world = client.get_world()
         hud = HUD(args.width, args.height)
@@ -86,41 +95,33 @@ def game_loop(args):
 
         world = World(sim_world, hud, settings_menu, args)
 
-        # TODO: force feedback adjust. Not working on G923.
-        # device = evdev.list_devices()[0]
-        # evtdev = InputDevice(device)
-        # val = 20000  # val \in [0,65535]
-        # evtdev.write(ecodes.EV_FF, ecodes.FF_AUTOCENTER, val)
-
-        clock = pygame.time.Clock()
-
         if args.sync:
             sim_world.tick()
 
         while True:
+
+            snapshot = client.get_world().get_snapshot()
+            frame = snapshot.frame
+
             if args.sync:
                 sim_world.tick()
 
-            clock.tick_busy_loop(60)
-            snapshot = client.get_world().get_snapshot()
-            frame = snapshot.frame
+            ready_clients = {}
+            ids = []
+            while len(ready_clients) < NUM_EXPECTED_CLIENTS:
+                ident, _, msg = socket.recv_multipart()
+
+                msg = msg.decode('utf-8')
+                is_ready, frame_id = msg.split(",")
+
+                if is_ready == "READY" and frame_id == frame:
+                    ready_clients[ident] = True
+                    ids.append(ident)
             
-            if controller.parse_events(world, clock, frame):
-                break
-            if settings_menu.config_changed:
-                controller.update_steering_config(settings_menu.get_steering_config())
-                settings_menu.config_changed = False
-            if settings_menu.config_save:
-                controller.save_config_file()
-                settings_menu.config_save = False
-            
-            recorder.save_position(world.player, frame)
-                
-            
+            for id in ids:
+                socket.send_multipart([id, b"", b"OK"])
+
             world.tick(clock)
-            
-            world.render(display)
-            pygame.display.flip()
 
     finally:
 
@@ -131,7 +132,6 @@ def game_loop(args):
             world.destroy()
         
         pygame.quit()
-        
         print('\nCancelled by user. Bye!')
 
 def main():
@@ -160,7 +160,7 @@ def main():
     argparser.add_argument(
         '--res',
         metavar='WIDTHxHEIGHT',
-        default='1920x1080',
+        default='400x300',
         help='window resolution (default: 1920x1080)')
     argparser.add_argument(
         '--filter',

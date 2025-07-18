@@ -7,7 +7,7 @@ import imageio.v3 as iio
 import multiprocessing
 from multiprocessing import shared_memory
 import ctypes
-
+from components.recorder import recorder
 
 def decode_loop(bytes_q, shm_decoded, terminate):
     while not terminate.value:
@@ -29,7 +29,7 @@ def decode_loop(bytes_q, shm_decoded, terminate):
 
 
 class Decoder:
-    def __init__(self, sensor, width, height):
+    def __init__(self, sensor, width, height, cam_type):
         self.sensor = sensor
         self.surface = None
 
@@ -39,12 +39,13 @@ class Decoder:
         self.process = multiprocessing.Process(target=decode_loop,
                                                args=(self.bytes_q, self.shm_decoded, self.terminate))
         self.decoded_shape = (height, width, 3)
+        self.cam_type = cam_type
 
     def start(self):
         self.terminate.value = False
         # We need to pass the lambda a weak reference to self to avoid circular reference.
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data))
+        self.sensor.listen(lambda byte_data: _decode(weak_self, byte_data, self.cam_type))
         self.process.start()
 
     def stop(self):
@@ -55,20 +56,19 @@ class Decoder:
     def destroy(self):
         if not self.terminate.value:
             self.stop()
+
         self.shm_decoded.close()
         self.shm_decoded.unlink()
         self.sensor.destroy()
-
+        
 
 class CameraManager(object):
     def __init__(self, parent_actor, hud):
         self.driver_camera_decoder = None
         self.reverse_camera_decoder = None
         self.side_mirror_camera_decoders = []
-
         self._parent = parent_actor
         self.hud = hud
-        self.recording = False
         self._camera_transforms = [
             carla.Transform(carla.Location(x=0.23, y=-0.3, z=1.25), carla.Rotation(pitch=0)),  # First person
             carla.Transform(carla.Location(x=0.1, y=-0.2, z=1.3), carla.Rotation(yaw=-60)),  # Left side view
@@ -121,44 +121,61 @@ class CameraManager(object):
             bp.set_attribute('fov', str(45.0))
             mirror_info.append(bp)
 
-    def set_sensor(self, index, notify=True):
+    def set_sensor(self, index, save_folder, notify=True):
         index = index % len(self.driver_view_info)
         needs_respawn = self.index is None
         if needs_respawn:
             if self.driver_camera_decoder is not None:
                 self.driver_camera_decoder.destroy()
                 self.reverse_camera_decoder.destroy()
+                self.left_side_mirror_decoder.destroy()
+                self.right_side_mirror_decoder.destroy()
 
                 self.driver_camera_decoder = None
                 self.reverse_camera_decoder = None
+                self.left_side_mirror_decoder = None
+                self.right_side_mirror_decoder = None
 
             self.driver_camera_decoder = self._decoder_setup(self.driver_view_info[0][-1],
-                                                             self._camera_transforms[0])
+                                                             self._camera_transforms[0], 
+                                                             "driver", save_folder)
             self.driver_camera_decoder.start()
 
             self.reverse_camera_decoder = self._decoder_setup(self.reverse_mirror_info[0][-1],
-                                                              self._reverse_mirror_transforms[0])
+                                                              self._reverse_mirror_transforms[0], 
+                                                              "reverse", save_folder)
             self.reverse_camera_decoder.start()
 
-            # for i in range(2):
-            #     side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[i][-1],
-            #                                               self._side_mirrors_transforms[i])
-            #     self.side_mirror_camera_decoders.append(side_mirror_decoder)
-            #     side_mirror_decoder.start()
+
+            self.left_side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[0][-1],
+                                                          self._side_mirrors_transforms[0], "left", save_folder)
+            
+            self.right_side_mirror_decoder = self._decoder_setup(self.sensors_side_mirrors_info[1][-1],
+                                                          self._side_mirrors_transforms[1], "right", save_folder)
+            
+            self.side_mirror_camera_decoders.append(self.left_side_mirror_decoder)
+            self.side_mirror_camera_decoders.append(self.right_side_mirror_decoder)
+            
+            self.left_side_mirror_decoder.start()
+            self.right_side_mirror_decoder.start()
 
         if notify:
             self.hud.notification(self.driver_view_info[index][2])
         self.index = index
 
-    def _decoder_setup(self, bp, transform):
+    def _decoder_setup(self, bp, transform, cam_type, save_folder):
         camera = self._parent.get_world().spawn_actor(bp, transform, attach_to=self._parent)
-        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int())
+        self.save_folder = save_folder
+        decoder = Decoder(camera, bp.get_attribute('image_size_x').as_int(), bp.get_attribute('image_size_y').as_int(), cam_type)
         return decoder
 
     def _switch_side_view(self):
         prev_decoder = self.driver_camera_decoder
+
+        cam_type = "left" if self.transform_index == 1 else "right" 
+
         self.driver_camera_decoder = self._decoder_setup(self.driver_view_info[0][-1],
-                                                         self._camera_transforms[self.transform_index])
+                                                         self._camera_transforms[self.transform_index], cam_type, self.save_folder)
         self.driver_camera_decoder.start()
         prev_decoder.destroy()
 
@@ -182,8 +199,7 @@ class CameraManager(object):
         #     display.blit(self.side_mirror_camera_decoders[1].surface,
         #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
 
-
-def _decode(weak_self, byte_data):
+def _decode(weak_self, byte_data, cam_type):
     self = weak_self()
     if not self or self.terminate.value:
         return
@@ -193,3 +209,5 @@ def _decode(weak_self, byte_data):
 
     data = np.ndarray(self.decoded_shape, dtype=np.uint8, buffer=self.shm_decoded.buf)
     self.surface = pygame.surfarray.make_surface(data.swapaxes(0, 1))
+
+    recorder.save_image(np.copy(data), cam_type, byte_data.frame)

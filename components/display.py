@@ -25,6 +25,7 @@ import carla
 import math
 import datetime
 from components.utils import get_actor_display_name
+from components.recorder import recorder
 
 
 class FadingText(object):
@@ -324,6 +325,10 @@ class HUD(object):
         if self.reverse:
             surface = self._font_mono3.render(str("REVERSING"), True, (255, 0, 0))
             display.blit(surface, (int(self.dim[0] / 2 - 50), int(self.dim[1] / 1.2 + 60)))
+
+        if recorder.is_recording():
+            surface = self._font_mono3.render(str("RECORDING"), True, (255, 0, 0))
+            display.blit(surface, (int(self.dim[0] / 2 - 50), int(self.dim[1] / 1.2 + 20)))
 
 
         # for item in self._info_text:
