@@ -110,14 +110,14 @@ class CameraManager(object):
 
         for item in self.reverse_mirror_info:
             bp = bp_library.find(item[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 12)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 24)))
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 4)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 8)))
             item.append(bp)
 
         for mirror_info in self.sensors_side_mirrors_info:
             bp = bp_library.find(mirror_info[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 16)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 16)))
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 4)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 4)))
             bp.set_attribute('fov', str(45.0))
             mirror_info.append(bp)
 
@@ -191,7 +191,15 @@ class CameraManager(object):
         if self.driver_camera_decoder.surface is not None:
             display.blit(self.driver_camera_decoder.surface, (0, 0))
         if self.reverse_camera_decoder.surface is not None:
-            display.blit(self.reverse_camera_decoder.surface, (int(6 * self.hud.dim[0] / 16), 0))
+            new_width = int(self.reverse_camera_decoder.surface.get_width() * 0.5)
+            new_height = int(self.reverse_camera_decoder.surface.get_height() * 0.5)
+            
+            # Scale the surface
+            scaled_surface = pygame.transform.smoothscale(self.reverse_camera_decoder.surface, (new_width, new_height))
+            
+            # Display the scaled surface
+            display.blit(scaled_surface, (int(6 * self.hud.dim[0] / 16), 0))
+            #display.blit(self.reverse_camera_decoder.surface, (int(6 * self.hud.dim[0] / 32), 0))
         # if self.side_mirror_camera_decoders[0].surface is not None:
         #     display.blit(self.side_mirror_camera_decoders[0].surface,
         #                  (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
