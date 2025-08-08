@@ -2,7 +2,6 @@ import imageio.v3 as iio
 import os 
 from pathlib import Path
 import concurrent.futures
-
 from datetime import datetime
 
 
@@ -62,7 +61,7 @@ class Recorder():
 
         self.pool.submit(_worker)
 
-    def save_button(self, type, button, frame, timestamp) -> None:
+    def save_button(self, type, button, frame, ticks) -> None:
         if self.recording == False:
             return
         
@@ -70,11 +69,11 @@ class Recorder():
             file = self.recording_path / "buttons.csv"
 
             with open(file, "a") as f:
-                f.write(f'{timestamp},{frame},{type},{button}\n')
+                f.write(f'{datetime.now()},{ticks},{frame},{type},{button}\n')
         
         self.pool.submit(_worker)
 
-    def save_hat(self, type, value, frame, timestamp) -> None:
+    def save_hat(self, type, value, frame, ticks) -> None:
         if self.recording == False:
             return
         
@@ -82,11 +81,11 @@ class Recorder():
             file = self.recording_path / "hat.csv"
 
             with open(file, "a") as f:
-                f.write(f'{timestamp},{frame},{type},{value}\n')
+                f.write(f'{datetime.now()},{ticks},{frame},{type},{value}\n')
         
         self.pool.submit(_worker)
 
-    def save_key(self, type, key, frame, timestamp) -> None:
+    def save_key(self, type, key, frame, ticks) -> None:
         if self.recording == False:
             return
         
@@ -94,7 +93,7 @@ class Recorder():
             file = self.recording_path / "keys.csv"
 
             with open(file, "a") as f:
-                f.write(f'{timestamp},{frame},{type},{key}\n')\
+                f.write(f'{datetime.now()},{ticks},{frame},{type},{key}\n')\
         
         self.pool.submit(_worker)
 
@@ -106,7 +105,7 @@ class Recorder():
             file = self.recording_path / "joysticks.csv"
 
             with open(file, "a") as f:
-                f.write(f'{timestamp},{frame},{throttle_raw},{throttle_calculated},{brake_raw},{brake_calculated},{steer_raw},{steer_calculated}\n')
+                f.write(f'{datetime.now()},{timestamp},{frame},{throttle_raw},{throttle_calculated},{brake_raw},{brake_calculated},{steer_raw},{steer_calculated}\n')
         
         self.pool.submit(_worker)
 
