@@ -57,7 +57,7 @@ class Recorder():
             file = self.recording_path / "position.csv"
 
             with open(file, "a") as f:
-                f.write(f'{frame},{vehicle.id},{transform.location.x},{transform.location.y},{transform.location.z},{transform.rotation.yaw},{transform.rotation.pitch},{transform.rotation.roll}\n')
+                f.write(f'{frame},{vehicle.id},{transform.location.x},{transform.location.y},{transform.location.z},{transform.rotation.yaw},{transform.rotation.pitch},{transform.rotation.roll},{vehicle.get_velocity()}\n')
 
         self.pool.submit(_worker)
 
