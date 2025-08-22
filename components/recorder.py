@@ -11,9 +11,15 @@ class Recorder():
         self.pool = concurrent.futures.ThreadPoolExecutor(max_workers = 8)
         self.recording = False
 
-        self.take = 0
         now = datetime.now()
         self._base = base_path / now.strftime("%Y-%m-%d")
+
+        if self._base.exists():
+            existing_takes = [int(p.name) for p in self._base.iterdir() if p.is_dir() and p.name.isdigit()]
+            self.take = max(existing_takes) + 1 if existing_takes else 0
+        else:
+            self.take = 0
+
         self.recording_path = self._base / str(self.take)
 
     def __del__(self):
