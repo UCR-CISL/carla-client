@@ -66,7 +66,7 @@ class Recorder():
             angular = (angular_velocity.x**2 + angular_velocity.y**2 + angular_velocity.z**2) ** 0.5
 
             with open(file, "a") as f:
-                f.write(f'{frame},{vehicle.id},{transform.location.x},{transform.location.y},{transform.location.z},{transform.rotation.yaw},{transform.rotation.pitch},{transform.rotation.roll},{speed},{accel},{angular}\n')
+                f.write(f'{datetime.now()},{frame},{vehicle.id},{transform.location.x},{transform.location.y},{transform.location.z},{transform.rotation.yaw},{transform.rotation.pitch},{transform.rotation.roll},{speed},{accel},{angular}\n')
 
         self.pool.submit(_worker)
 
