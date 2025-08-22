@@ -186,8 +186,8 @@ class SteeringwheelController(object):
             throttleCmd = 0
         elif throttleCmd > 1:
             throttleCmd = 1
-
-        brakeCmd = 1.6 + (2.05 * math.log10(
+        
+        brakeCmd = 1.4 + (1.75 * math.log10(
             -0.7 * jsInputs[self._brake_idx] + 1.4) - 1.2) / 0.92
         if brakeCmd <= 0:
             brakeCmd = 0
