@@ -110,14 +110,14 @@ class CameraManager(object):
 
         for item in self.reverse_mirror_info:
             bp = bp_library.find(item[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 4)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 8)))
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 12)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 24)))
             item.append(bp)
 
         for mirror_info in self.sensors_side_mirrors_info:
             bp = bp_library.find(mirror_info[0])
-            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 4)))
-            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 4)))
+            bp.set_attribute('image_size_x', str(int(3 * hud.dim[0] / 12)))
+            bp.set_attribute('image_size_y', str(int(3 * hud.dim[1] / 12)))
             bp.set_attribute('fov', str(45.0))
             mirror_info.append(bp)
 
@@ -183,9 +183,9 @@ class CameraManager(object):
         self.transform_index = transform_index
         self._switch_side_view()
 
-    def toggle_recording(self):
-        self.recording = not self.recording
-        self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
+    # def toggle_recording(self):
+    #     self.recording = not self.recording
+    #     self.hud.notification('Recording %s' % ('On' if self.recording else 'Off'))
 
     def render(self, display):
         if self.driver_camera_decoder.surface is not None:

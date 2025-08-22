@@ -140,8 +140,8 @@ class SteeringwheelController(object):
                     world.next_weather(reverse=True)
                 elif event.key == K_c:
                     world.next_weather()
-                elif event.key == K_r:
-                    world.camera_manager.toggle_recording()
+                # elif event.key == K_r:
+                #     world.camera_manager.toggle_recording()
                 if isinstance(self._control, carla.VehicleControl):
                     if event.key == K_q:
                         self._control.gear = 1 if self._control.reverse else -1
@@ -302,8 +302,8 @@ class KeyboardController(object):
                     if pygame.key.get_mods() & KMOD_CTRL:
                         index_ctrl = 9
                     world.camera_manager.set_sensor(event.key - 1 - K_0 + index_ctrl)
-                elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
-                    world.camera_manager.toggle_recording()
+                # elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
+                #     world.camera_manager.toggle_recording()
                 if event.key == K_q:
                     self._control.gear = 1 if self._control.reverse else -1
                 elif event.key == K_m:
