@@ -114,7 +114,7 @@ def game_loop(args):
                 controller.save_config_file()
                 settings_menu.config_save = False
             
-            recorder.save_position(world.player, frame)
+            recorder.save_position(world.player, frame,world.intent)
                 
             
             world.tick(clock)

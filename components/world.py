@@ -21,6 +21,7 @@ class World(object):
         self.sync = args.sync
         self.restart()
         self.world.on_tick(hud.on_world_tick)
+        self.intent = "Straight"
 
     def restart(self):
         # Keep same camera config if the camera manager exists.

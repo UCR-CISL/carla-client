@@ -206,6 +206,7 @@ class HUD(object):
         self._info_text = []
         self._server_clock = pygame.time.Clock()
         self.reverse = False
+        self.intent = "Straight"
 
         self.display = None
         self.settings_button = SettingsButton(width, height)
@@ -230,6 +231,7 @@ class HUD(object):
         # collision = [colhist[x + self.frame - 200] for x in range(0, 200)]
         # max_col = max(1.0, max(collision))
         # collision = [x / max_col for x in collision]
+        self.intent = world.intent
         vehicles = world.world.get_actors().filter('vehicle.*')
         self._info = dict()
         self._info['speed'] = '% 1.0f mph' % (0.621371 * 3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
@@ -329,6 +331,8 @@ class HUD(object):
         if recorder.is_recording():
             surface = self._font_mono3.render(str("RECORDING"), True, (255, 0, 0))
             display.blit(surface, (int(self.dim[0] / 2 - 50), int(self.dim[1] / 1.2 + 20)))
+        surface = self._font_mono3.render(str(f"INNTENT : {self.intent}"), True, (0, 255, 255))
+        display.blit(surface, (int(self.dim[0] / 2 - 100), int(self.dim[1] / 1.2 + 40)))
 
 
         # for item in self._info_text:
