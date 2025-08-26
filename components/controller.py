@@ -115,9 +115,9 @@ class SteeringwheelController(object):
                     self._lights ^= carla.VehicleLightState.RightBlinker
                     world.player.set_light_state(carla.VehicleLightState(self._lights))
                     world.intent = "Right Lane"
-                elif event.button == js.BUTTON_CNTRCLKWISE:
-                    world.intent = "Left Turn"
                 elif event.button == js.BUTTON__CLKWISE:
+                    world.intent = "Left Turn"
+                elif event.button == js.BUTTON_CNTRCLKWISE:
                     world.intent = "Right Turn"
                 elif event.button == js.BUTTON_L2 :
                     world.intent = "U-Turn"
