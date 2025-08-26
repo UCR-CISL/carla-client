@@ -331,7 +331,7 @@ class HUD(object):
         if recorder.is_recording():
             surface = self._font_mono3.render(str("RECORDING"), True, (255, 0, 0))
             display.blit(surface, (int(self.dim[0] / 2 - 50), int(self.dim[1] / 1.2 + 20)))
-        surface = self._font_mono3.render(str(f"INNTENT : {self.intent}"), True, (0, 255, 255))
+        surface = self._font_mono3.render(str(f"INTENT : {self.intent}"), True, (0, 255, 255))
         display.blit(surface, (int(self.dim[0] / 2 - 100), int(self.dim[1] / 1.2 + 40)))
 
 
