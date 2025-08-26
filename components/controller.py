@@ -100,20 +100,31 @@ class SteeringwheelController(object):
                 recorder.save_button("JOYBUTTONDOWN", event.button, frame, timestamp)
                 if event.button == js.BUTTON_A:
                     world.restart()
-                elif event.button == js.BUTTON_MENU:
-                    world.hud.toggle_info()
                 elif event.button == js.BUTTON_Y:
                     world.next_weather()
                 elif event.button == js.BUTTON_X:
                     recorder.turn_recorder_off() if recorder.is_recording() else recorder.turn_recorder_on()
                 elif event.button == self._reverse_idx:
                     self._control.gear = 1 if self._control.reverse else -1
+                # Buttons for intent :
                 elif event.button == js.BUTTON_GEAR_DOWN:
                     self._lights ^= carla.VehicleLightState.LeftBlinker
                     world.player.set_light_state(carla.VehicleLightState(self._lights))
+                    world.intent = "Left Lane"
                 elif event.button == js.BUTTON_GEAR_UP:
                     self._lights ^= carla.VehicleLightState.RightBlinker
                     world.player.set_light_state(carla.VehicleLightState(self._lights))
+                    world.intent = "Right Lane"
+                elif event.button == js.BUTTON_CNTRCLKWISE:
+                    world.intent = "Left Turn"
+                elif event.button == js.BUTTON__CLKWISE:
+                    world.intent = "Right Turn"
+                elif event.button == js.BUTTON_L2 :
+                    world.intent = "U-Turn"
+                elif event.button == js.BUTTON_R2 :
+                    world.intent = "Straight"
+                
+                
 
             elif event.type == pygame.JOYHATMOTION:
                 recorder.save_hat("JOYHATMOTION", event.value, frame, timestamp)
@@ -179,6 +190,7 @@ class SteeringwheelController(object):
 
         steerCmd = jsInputs[self._steer_idx] * 0.5
 
+
         K2 = 1.6
         x = jsInputs[self._throttle_idx]
 
@@ -197,6 +209,7 @@ class SteeringwheelController(object):
             throttleCmd = 0 
 
         brakeCmd = 1.6 + (2.05 * math.log10(
+
             -0.7 * jsInputs[self._brake_idx] + 1.4) - 1.2) / 0.92
         if brakeCmd <= 0:
             brakeCmd = 0

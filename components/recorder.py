@@ -11,9 +11,15 @@ class Recorder():
         self.pool = concurrent.futures.ThreadPoolExecutor(max_workers = 8)
         self.recording = False
 
-        self.take = 0
         now = datetime.now()
         self._base = base_path / now.strftime("%Y-%m-%d")
+
+        if self._base.exists():
+            existing_takes = [int(p.name) for p in self._base.iterdir() if p.is_dir() and p.name.isdigit()]
+            self.take = max(existing_takes) + 1 if existing_takes else 0
+        else:
+            self.take = 0
+
         self.recording_path = self._base / str(self.take)
 
     def __del__(self):
@@ -47,7 +53,7 @@ class Recorder():
         
         self.pool.submit(_worker)
 
-    def save_position(self, vehicle, frame: str) -> None:
+    def save_position(self, vehicle, frame: str,intent) -> None:
         if self.recording == False:
             return
         
@@ -66,7 +72,7 @@ class Recorder():
             angular = (angular_velocity.x**2 + angular_velocity.y**2 + angular_velocity.z**2) ** 0.5
 
             with open(file, "a") as f:
-                f.write(f'{datetime.now()},{frame},{vehicle.id},{transform.location.x},{transform.location.y},{transform.location.z},{transform.rotation.yaw},{transform.rotation.pitch},{transform.rotation.roll},{speed},{accel},{angular}\n')
+                f.write(f'{datetime.now()},{frame},{vehicle.id},{transform.location.x},{transform.location.y},{transform.location.z},{transform.rotation.yaw},{transform.rotation.pitch},{transform.rotation.roll},{speed},{accel},{angular},{intent}\n')
 
         self.pool.submit(_worker)
 
