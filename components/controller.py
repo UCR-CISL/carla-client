@@ -190,15 +190,26 @@ class SteeringwheelController(object):
 
         steerCmd = jsInputs[self._steer_idx] * 0.5
 
-        K2 = 1.6  # 1.6
-        throttleCmd = K2 + (2.05 * math.log10(
-            -0.7 * jsInputs[self._throttle_idx] + 1.4) - 1.2) / 0.92
-        if throttleCmd <= 0:
-            throttleCmd = 0
-        elif throttleCmd > 1:
-            throttleCmd = 1
-        
-        brakeCmd = 1.4 + (1.75 * math.log10(
+
+        K2 = 1.6
+        x = jsInputs[self._throttle_idx]
+
+        # Original nonlinear computation
+        y = K2 + (2.05 * math.log10(-0.7 * x + 1.4) - 1.2) / 0.92
+
+        # Determine original output range (can be computed from min/max of x)
+        y_min =-0.049509802142144954
+        y_max = 1.0136408197875375
+
+        # Scale to 0-0.75
+        throttleCmd = (y - y_min) * 0.75 / (y_max - y_min)
+
+        #Speed limit
+        if self._mph >=45 :
+            throttleCmd = 0 
+
+        brakeCmd = 1.6 + (2.05 * math.log10(
+
             -0.7 * jsInputs[self._brake_idx] + 1.4) - 1.2) / 0.92
         if brakeCmd <= 0:
             brakeCmd = 0
