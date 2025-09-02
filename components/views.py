@@ -192,20 +192,29 @@ class CameraManager(object):
             display.blit(self.driver_camera_decoder.surface, (0, 0))
         if self.reverse_camera_decoder.surface is not None:
             new_width = int(self.reverse_camera_decoder.surface.get_width() * 0.5)
-            new_height = int(self.reverse_camera_decoder.surface.get_height() * 0.5)
-            
-            # Scale the surface
+            new_height = int(self.reverse_camera_decoder.surface.get_height() * 0.7)
             scaled_surface = pygame.transform.smoothscale(self.reverse_camera_decoder.surface, (new_width, new_height))
-            
-            # Display the scaled surface
             display.blit(scaled_surface, (int(6 * self.hud.dim[0] / 16), 0))
-            #display.blit(self.reverse_camera_decoder.surface, (int(6 * self.hud.dim[0] / 32), 0))
-        # if self.side_mirror_camera_decoders[0].surface is not None:
-        #     display.blit(self.side_mirror_camera_decoders[0].surface,
-        #                  (int(self.hud.dim[0] / 16), int(12 * self.hud.dim[1] / 16)))
-        # if self.side_mirror_camera_decoders[1].surface is not None:
-        #     display.blit(self.side_mirror_camera_decoders[1].surface,
-        #                  (int(14 * self.hud.dim[0] / 16 - self.hud.dim[0] / 8), int(12 * self.hud.dim[1] / 16)))
+        # Render left side mirror camera
+        if self.left_side_mirror_decoder and self.left_side_mirror_decoder.surface is not None:
+            new_width = int(self.left_side_mirror_decoder.surface.get_width() * 0.5) #240
+            new_height = 94#100
+            scaled_surface = pygame.transform.smoothscale(self.left_side_mirror_decoder.surface, (new_width, new_height))
+            display.blit(
+                scaled_surface,
+                (100, 0)
+            )
+        
+        # Render right side mirror camera
+        if self.right_side_mirror_decoder and self.right_side_mirror_decoder.surface is not None:
+            new_width = int(self.right_side_mirror_decoder.surface.get_width() * 0.5)
+            new_height = 94
+            scaled_surface = pygame.transform.smoothscale(self.right_side_mirror_decoder.surface, (new_width, new_height))
+            display.blit(
+                scaled_surface,
+                (1576,0)
+            )
+        
 
 def _decode(weak_self, byte_data, cam_type):
     self = weak_self()
