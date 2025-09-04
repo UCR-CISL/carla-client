@@ -31,8 +31,8 @@ class World(object):
         blueprint = random.choice(self.world.get_blueprint_library().filter(self._actor_filter))
         blueprint.set_attribute('role_name', 'hero')
         if blueprint.has_attribute('color'):
-            color = random.choice(blueprint.get_attribute('color').recommended_values)
-            blueprint.set_attribute('color', color)
+            #color = random.choice(blueprint.get_attribute('color').recommended_values)
+            blueprint.set_attribute('color', '0,0,255')
         # Spawn the player.
         if self.player is not None:
             spawn_point = self.player.get_transform()

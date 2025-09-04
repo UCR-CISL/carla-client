@@ -191,28 +191,28 @@ class CameraManager(object):
         if self.driver_camera_decoder.surface is not None:
             display.blit(self.driver_camera_decoder.surface, (0, 0))
         if self.reverse_camera_decoder.surface is not None:
-            new_width = int(self.reverse_camera_decoder.surface.get_width() * 0.5)
+            new_width = int(self.reverse_camera_decoder.surface.get_width() * 0.8)
             new_height = int(self.reverse_camera_decoder.surface.get_height() * 0.7)
             scaled_surface = pygame.transform.smoothscale(self.reverse_camera_decoder.surface, (new_width, new_height))
-            display.blit(scaled_surface, (int(6 * self.hud.dim[0] / 16), 0))
+            display.blit(scaled_surface, (int(6 * self.hud.dim[0] / 16), 10))
         # Render left side mirror camera
         if self.left_side_mirror_decoder and self.left_side_mirror_decoder.surface is not None:
-            new_width = int(self.left_side_mirror_decoder.surface.get_width() * 0.5) #240
+            new_width = 340
             new_height = 94#100
             scaled_surface = pygame.transform.smoothscale(self.left_side_mirror_decoder.surface, (new_width, new_height))
             display.blit(
                 scaled_surface,
-                (100, 0)
+                (100, 10)
             )
         
         # Render right side mirror camera
         if self.right_side_mirror_decoder and self.right_side_mirror_decoder.surface is not None:
-            new_width = int(self.right_side_mirror_decoder.surface.get_width() * 0.5)
+            new_width = 340
             new_height = 94
             scaled_surface = pygame.transform.smoothscale(self.right_side_mirror_decoder.surface, (new_width, new_height))
             display.blit(
                 scaled_surface,
-                (1576,0)
+                (1576,10)
             )
         
 

@@ -34,6 +34,14 @@ class Recorder():
 
         self.recording = True
 
+    def get_image_folders_status(self):
+        required_folders = ["driver", "left", "reverse", "right"]
+        images_path = self.recording_path / "images"
+        status = {}
+        for folder in required_folders:
+            status[folder] = (images_path / folder).is_dir()
+        return status
+
     def turn_recorder_off(self) -> None:
         self.recording = False
 
