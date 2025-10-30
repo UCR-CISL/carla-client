@@ -11,6 +11,19 @@ import re
 import csv
 import math
 
+# Setup base path and find takes
+#base_path = Path("recordings") / f"{datetime.now().strftime('%Y-%m-%d')}-Alpha"
+base_path = Path("recordings") / f"2025-10-27-Lambda"
+start_take = 0
+takes = sorted([int(p.name) for p in base_path.iterdir() if p.is_dir() and p.name.isdigit()])
+# --- Filter to only include takes >= start_take ---
+takes = [t for t in takes if t >= start_take]
+takes = ['0','1','2', '3', '4']
+if not takes:
+    raise RuntimeError(f"No takes found in {base_path}")
+
+print(f"Found takes: {takes}")
+
 
 
 # --- CARLA Setup ---
@@ -23,7 +36,7 @@ client.set_timeout(10.0)
 world = client.get_world()
 settings = world.get_settings()
 settings.synchronous_mode = True
-settings.fixed_delta_seconds = 0.05  # 20 FPS
+# settings.fixed_delta_seconds = 0.0769  # 20 FPS
 world.apply_settings(settings)
 
 
@@ -108,7 +121,7 @@ def setup_cameras(world, vehicle, camera_bp, camera_transforms, base_path, first
                 img_array = img_array.reshape((image.height, image.width, 4))
                 img_bgr = img_array[:, :, :3][:, :, ::-1]
                 
-                frame_number = first_frame + frames_processed
+                frame_number  = world.get_snapshot().frame
                 img_path = camera_folder / f"{frame_number}.jpg"
                 
                 cv2.imwrite(str(img_path), img_array,  [int(cv2.IMWRITE_JPEG_QUALITY), 40])
@@ -143,7 +156,6 @@ def setup_cameras(world, vehicle, camera_bp, camera_transforms, base_path, first
 
 def simulate_replay(take_path: Path, client, world, base_path: Path, first_frame: int):
     """Run a replay simulation for a single take with camera setup and frame capture."""
-    running = True
     clock = pygame.time.Clock()
     screen = pygame.display.set_mode((1600, 900))
     pygame.display.set_caption('CARLA Replay')
@@ -168,6 +180,7 @@ def simulate_replay(take_path: Path, client, world, base_path: Path, first_frame
     
     # Find the vehicle from replay
     vehicles = world.get_actors().filter('vehicle.dodge.charger_2020')
+    print(vehicles)
     if len(vehicles) == 0:
         raise RuntimeError("No vehicles found in the replay!")
     position_csv = take_path / 'position.csv'
@@ -183,22 +196,22 @@ def simulate_replay(take_path: Path, client, world, base_path: Path, first_frame
     # Define camera transforms
     camera_transforms = {
         "top": carla.Transform(
-            carla.Location(x=0.40, y=0.00, z=1.64),
+            carla.Location(x=0.40, y=0.00, z=1.60),
             carla.Rotation(pitch=11.00, yaw=0.00, roll=0.00)
         ),
         "left": carla.Transform(
-            carla.Location(x=1.93, y=-0.57, z=1.08),
-            carla.Rotation(pitch=7.00, yaw=-83.00, roll=0.00)
+            carla.Location(x=-0.31, y=-0.48, z=1.60),
+            carla.Rotation(pitch=-1.00, yaw=-90.00, roll=0.00)
         ),
         "right": carla.Transform(
-            carla.Location(x=1.93, y=0.57, z=1.08),
-            carla.Rotation(pitch=7.00, yaw=83.00, roll=0.00)
+            carla.Location(x=-0.31, y=0.48, z=1.60),
+            carla.Rotation(pitch=-1.00, yaw=-270.00, roll=0.00)
         ),
         "rear": carla.Transform(
-            carla.Location(x=-0.96, y=0.00, z=1.63),
+            carla.Location(x=-0.96, y=0.00, z=1.60),
             carla.Rotation(pitch=13.00, yaw=180.00, roll=0.00)
         )
-    }  
+    }
     
     return {
         'recording_path': recording_path,
@@ -257,20 +270,8 @@ def process_take(take_path: Path, client, world):
         'frame_complete_event': frame_complete_event
     }
 
-# Setup base path and find takes
-#base_path = Path("recordings") / f"{datetime.now().strftime('%Y-%m-%d')}-Alpha"
-base_path = Path("recordings") / f"2025-10-20-Alpha"
-start_take = 0
-takes = sorted([int(p.name) for p in base_path.iterdir() if p.is_dir() and p.name.isdigit()])
-# --- Filter to only include takes >= start_take ---
-takes = [t for t in takes if t >= start_take]
 
-if not takes:
-    raise RuntimeError(f"No takes found in {base_path}")
-
-print(f"Found takes: {takes}")
-
-def run_playback_loop(context, world, client):
+def run_playback_loop(context, world, client, control_writer=None, position_writer=None):
     """Run the main playback loop for recording playback and visualization."""
     running = True
     starting_frame = None
@@ -282,7 +283,7 @@ def run_playback_loop(context, world, client):
     match = re.search(r"Frames:\s*(\d+)", info)
     total_frames = int(match.group(1)) if match else None
     print(f"Recording has {total_frames} frames." if total_frames else "Could not find total frame count.")
-    
+    vehicle = context['vehicle']
     while running:
         try:
             # Clear frame completion event
@@ -290,7 +291,58 @@ def run_playback_loop(context, world, client):
             
             # Tick world to advance simulation
             world.tick()
-            
+            #-----Log position per frame---
+            vehicle_id = vehicle.id
+
+            # --- Get transform and motion data ---
+            transform = vehicle.get_transform()
+            velocity = vehicle.get_velocity()
+            acceleration = vehicle.get_acceleration()
+            angular_velocity = vehicle.get_angular_velocity()
+
+            speed = (velocity.x**2 + velocity.y**2 + velocity.z**2) ** 0.5
+            accel = (acceleration.x**2 + acceleration.y**2 + acceleration.z**2) ** 0.5
+            angular = (angular_velocity.x**2 + angular_velocity.y**2 + angular_velocity.z) ** 0.5
+
+            world_snapshot = world.get_snapshot()
+            timestamp = world_snapshot.timestamp
+
+            if position_writer:
+                try:
+                    position_writer.writerow([
+                        world_snapshot.frame,
+                        f"{timestamp.elapsed_seconds:.6f}",
+                        vehicle_id,
+                        transform.location.x,
+                        transform.location.y,
+                        transform.location.z,
+                        transform.rotation.yaw,
+                        transform.rotation.pitch,
+                        transform.rotation.roll,
+                        f"{speed}",
+                        f"{accel}",
+                        f"{angular}"
+                    ])
+                except Exception as e:
+                    print(f"Warning: Could not log location data: {e}")
+            # --- Log control values per frame ---
+            if control_writer:
+                try:
+                    control = vehicle.get_control()
+                    timestamp = world.get_snapshot().timestamp.elapsed_seconds
+                    control_writer.writerow([
+                        world.get_snapshot().frame,
+                        control.throttle,
+                        control.brake,
+                        control.steer,
+                        control.reverse,
+                        control.hand_brake,
+                        control.manual_gear_shift,
+                        control.gear
+                    ])
+                except Exception as e:
+                    print(f"Warning: Could not log control data: {e}")
+                
             # Wait for camera frames
             if not context['frame_complete_event'].wait(timeout=30.0):
                 print("Warning: Timeout waiting for cameras to write frames")
@@ -332,6 +384,13 @@ def run_playback_loop(context, world, client):
                 running = False
             else:
                 raise
+    if control_writer:
+        control_writer.writerow([])  # Optional blank line
+        control_writer = None
+    if position_writer:
+        position_writer.writerow([])  # Optional blank line
+        position_writer = None
+
 
 def cleanup_simulation(cameras, context):
     """Cleanup simulation resources."""
@@ -372,7 +431,31 @@ for take in takes:
         world, sim_context['vehicle'], sim_context['camera_bp'], sim_context['camera_transforms'],
         take_path, take_context['first_frame']
     )
-    
+    control_log_path = take_path / f"controls.csv"
+    control_log_file = open(control_log_path, mode='w', newline='')
+    control_writer = csv.writer(control_log_file)
+
+    position_log_path =  take_path / f"location.csv"
+    position_log_file = open(position_log_path, mode='w', newline='')
+    position_writer = csv.writer(position_log_file)
+
+    # Write header
+    position_writer.writerow([
+        "frame_id",
+        "timestamp",
+        "vehicle_id",
+        "x", "y", "z",
+        "yaw", "pitch", "roll",
+        "speed", "accel", "angular"
+    ])
+
+    # Write header row
+    control_writer.writerow([
+        "frame", 
+        "throttle", "brake", "steer", 
+        "reverse", "hand_brake", "manual_gear_shift", "gear"
+    ])
+
     # Create full context
     context = {**sim_context, **{
         'frames': frames,
@@ -383,7 +466,10 @@ for take in takes:
     }}
     
     # Run playback loop
-    run_playback_loop(context, world, client)
+    run_playback_loop(context, world, client, control_writer, position_writer)
+    control_log_file.close()
+    position_log_file.close()
+    print(f"Control log saved: {control_log_path}")
     
     # Cleanup
     cleanup_simulation(cameras, context)
