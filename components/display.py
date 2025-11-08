@@ -319,10 +319,10 @@ class HUD(object):
         display.blit(surface, (int(self.dim[0] / 2 - 260), int(self.dim[1] / 1.2 - 90)))
 
         surface = self._font_mono2.render(self._info['client_fps'], True, (255, 255, 255))
-        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 1.2 - 40)))
+        display.blit(surface, (int(self.dim[0] / 2 - 100), int(self.dim[1] / 1.2 - 40)))
 
         surface = self._font_mono2.render(self._info['server_fps'], True, (255, 255, 255))
-        display.blit(surface, (int(self.dim[0] / 2 - 200), int(self.dim[1] / 1.2 - 20)))
+        display.blit(surface, (int(self.dim[0] / 2 - 100), int(self.dim[1] / 1.2 - 20)))
 
         if self.reverse:
             surface = self._font_mono3.render(str("REVERSING"), True, (255, 0, 0))
@@ -343,8 +343,8 @@ class HUD(object):
                 color = (0, 255, 0) if folder_status.get(name, False) else (255, 0, 0)
                 label_surface = self._font_mono2.render(name.capitalize(), True, color)
                 display.blit(label_surface, (base_x + 20, base_y - 10 + idx * spacing))
-        surface = self._font_mono3.render(str(f"INTENT : {self.intent}"), True, (0, 255, 255))
-        display.blit(surface, (int(self.dim[0] / 2 - 100), int(self.dim[1] / 1.2 + 40)))
+        # surface = self._font_mono3.render(str(f"INTENT : {self.intent}"), True, (0, 255, 255))
+        # display.blit(surface, (int(self.dim[0] / 2 - 100), int(self.dim[1] / 1.2 + 40)))
 
 
         # for item in self._info_text:

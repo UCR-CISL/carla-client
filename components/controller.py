@@ -126,16 +126,16 @@ class SteeringwheelController(object):
                 
                 
 
-            elif event.type == pygame.JOYHATMOTION:
-                recorder.save_hat("JOYHATMOTION", event.value, frame, timestamp)
-                if event.value == js.HAT_LEFT:
-                    world.camera_manager.toggle_side_view(1)
-                elif event.value == js.HAT_RIGHT:
-                    world.camera_manager.toggle_side_view(2)
+            # elif event.type == pygame.JOYHATMOTION:
+            #     recorder.save_hat("JOYHATMOTION", event.value, frame, timestamp)
+            #     if event.value == js.HAT_LEFT:
+            #         world.camera_manager.toggle_side_view(1)
+            #     elif event.value == js.HAT_RIGHT:
+            #         world.camera_manager.toggle_side_view(2)
                 elif event.value == js.HAT_DOWN:
                     self._control.gear = 1 if self._control.reverse else -1
-                elif event.value == js.HAT_RELEASE:
-                    world.camera_manager.toggle_side_view(0)
+            #     elif event.value == js.HAT_RELEASE:
+            #         world.camera_manager.toggle_side_view(0)
 
             elif event.type == pygame.KEYUP:
                 recorder.save_key("KEYUP", pygame.key.name(event.key), frame, timestamp)

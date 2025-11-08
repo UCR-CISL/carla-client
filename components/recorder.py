@@ -1,8 +1,10 @@
+import time
 import imageio.v3 as iio
 import os 
 from pathlib import Path
 import concurrent.futures
 from datetime import datetime
+import subprocess
 
 
 
@@ -10,6 +12,7 @@ class Recorder():
     def __init__(self, base_path: Path):
         self.pool = concurrent.futures.ThreadPoolExecutor(max_workers = 8)
         self.recording = False
+        self.client = None
 
         now = datetime.now()
         self._base = base_path / now.strftime("%Y-%m-%d")
@@ -25,12 +28,29 @@ class Recorder():
     def __del__(self):
         self.pool.shutdown(wait = True) 
 
+    def set_client(self, client):
+        """Set the CARLA client for recording."""
+        self.client = client
+
     def turn_recorder_on(self) -> None:
         if self.recording:
             return 
         
         self.recording_path = self._base / str(self.take)
         self.take += 1
+
+        # Start CARLA recorder and save .log in recording_path if client is available
+        if self.client is not None:
+            try:
+                # Ensure directory exists
+                os.makedirs(self.recording_path, exist_ok=True)
+                
+                print(f"Starting CARLA recorder")
+                self.client.start_recorder("final.log",True)
+                
+            except Exception as e:
+                print(f"Error starting CARLA recorder: {e}")
+                return
 
         self.recording = True
 
@@ -43,23 +63,30 @@ class Recorder():
         return status
 
     def turn_recorder_off(self) -> None:
-        self.recording = False
+        if self.recording:
+            # Stop CARLA recorder if client is available
+            if self.client is not None:
+                self.client.stop_recorder()
+                print("Stopped CARLA recorder.")
+                time.sleep(3)
+                #We wait before copying so that the log file is fully written
+
+                # Copy the log file from the docker container directly to recording path
+                try:
+                    # Copy from docker directly to recording path
+                    subprocess.run(
+                        f"docker cp single:/home/carla/.config/Epic/CarlaUE4/Saved/final.log {self.recording_path}/recording.log",
+                        shell=True,
+                        check=True
+                    )
+                    print(f"Copied recording log to {self.recording_path / 'recording.log'}")
+                except Exception as e:
+                    print(f"Error copying recording log: {e}")
+                
+            self.recording = False
 
     def is_recording(self) -> bool:
         return self.recording
-
-    def save_image(self, image, type: str, frame: str) -> None:
-        if self.recording == False:
-            return
-
-        def _worker():
-            directory = self.recording_path / "images" / type 
-            os.makedirs(directory, exist_ok = True)
-
-            path = directory / f"{frame}.png"
-            iio.imwrite(path, image)
-        
-        self.pool.submit(_worker)
 
     def save_position(self, vehicle, frame: str,intent) -> None:
         if self.recording == False:
