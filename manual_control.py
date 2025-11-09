@@ -44,6 +44,7 @@ def game_loop(args):
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(5.0)
+        recorder.set_client(client)  # Set the CARLA client for the recorder
 
         display = pygame.display.set_mode(
             (args.width, args.height),
