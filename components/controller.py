@@ -132,7 +132,7 @@ class SteeringwheelController(object):
             #         world.camera_manager.toggle_side_view(1)
             #     elif event.value == js.HAT_RIGHT:
             #         world.camera_manager.toggle_side_view(2)
-                elif event.value == js.HAT_DOWN:
+                elif event.button == js.HAT_DOWN:
                     self._control.gear = 1 if self._control.reverse else -1
             #     elif event.value == js.HAT_RELEASE:
             #         world.camera_manager.toggle_side_view(0)

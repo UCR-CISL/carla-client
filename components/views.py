@@ -15,17 +15,20 @@ def decode_loop(bytes_q, shm_decoded, terminate):
             continue
         bytes_all = bytes_q.get()
 
-        frames = iio.imread(
-            bytes_all.tobytes(),
-            thread_count=16,
-            thread_type="SLICE",
-            index=0,
-            plugin="pyav",
-            extension=".m4v",
-        )
+        try: 
+            frames = iio.imread(
+                bytes_all.tobytes(),
+                thread_count=16,
+                thread_type="SLICE",
+                index=0,
+                plugin="pyav",
+                extension=".m4v",
+            )
 
-        b = np.ndarray(frames.shape, dtype=frames.dtype, buffer=shm_decoded.buf)
-        b[:] = frames[:]
+            b = np.ndarray(frames.shape, dtype=frames.dtype, buffer=shm_decoded.buf)
+            b[:] = frames[:]
+        except Exception as e:
+            continue
 
 
 class Decoder:
@@ -70,7 +73,8 @@ class CameraManager(object):
         self._parent = parent_actor
         self.hud = hud
         self._camera_transforms = [
-            carla.Transform(carla.Location(x=-0.1, y=-0.3, z=1.16), carla.Rotation(pitch=0)),  # First person
+            carla.Transform(carla.Location(x=-.1, y=-0.3, z=1.26), carla.Rotation(pitch=0)),  # First person
+            # carla.Transform(carla.Location(x=-0.1, y=-0.3, z=1.26), carla.Rotation(pitch=0)),  # First person
             # carla.Transform(carla.Location(x=0.1, y=-0.2, z=1.3), carla.Rotation(yaw=-60)),  # Left side view
             # carla.Transform(carla.Location(x=0.1, y=-0.2, z=1.3), carla.Rotation(yaw=60)),  # Right side view
             # carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15))  # Third person
